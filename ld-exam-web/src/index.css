@@ -28,6 +28,14 @@
   }
 }
 
+/* Hide browser's native password reveal icon (Edge/Chrome) */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+input::-webkit-credentials-auto-fill-button {
+  display: none;
+}
 @layer utilities {
   .glass {
     background-color: var(--glass-bg);
