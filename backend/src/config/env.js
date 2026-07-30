@@ -54,9 +54,14 @@ module.exports = {
   admin: {
     username: process.env.ADMIN_USERNAME || 'admin',
     password: process.env.ADMIN_PASSWORD || 'admin123',
+    passwordHash: process.env.ADMIN_PASSWORD_HASH || '',
   },
 
-  anthropic:  { apiKey: process.env.ANTHROPIC_API_KEY  || '' },
+  // AI Layer — local llama.cpp (on-device, no cloud, no API key)
+  llama: {
+    baseUrl: process.env.LLAMA_BASE_URL || 'http://127.0.0.1:8081',
+    timeout: parseInt(process.env.LLAMA_TIMEOUT || '30000', 10),
+  },
   supabase:   { url: process.env.SUPABASE_URL || '', anonKey: process.env.SUPABASE_ANON_KEY || '', serviceKey: process.env.SUPABASE_SERVICE_KEY || '' },
   firebase:   { projectId: process.env.FIREBASE_PROJECT_ID || '', clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '', privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n') },
   razorpay:   { keyId: process.env.RAZORPAY_KEY_ID || '', keySecret: process.env.RAZORPAY_KEY_SECRET || '', webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '' },

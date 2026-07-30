@@ -22,6 +22,15 @@ const MOTIVATIONAL_QUOTES = [
 
 // ─── GET /student — Full student dashboard data ─────────────────────────
 router.get('/student', requireAuth, async (req, res, next) => {
+  try { return await handleStudentAnalytics(req, res, next); } catch (err) { next(err); }
+});
+
+// Also respond to /student/:id (frontend calls this path)
+router.get('/student/:id', requireAuth, async (req, res, next) => {
+  try { return await handleStudentAnalytics(req, res, next); } catch (err) { next(err); }
+});
+
+async function handleStudentAnalytics(req, res, next) {
   try {
     const uid = req.user.id;
 
@@ -32,6 +41,7 @@ router.get('/student', requireAuth, async (req, res, next) => {
       categoryRows,
       weekActivityRows,
       totalStatsRow,
+      testAttemptsRows,
     ] = await Promise.all([
       // Student profile
       query(`
@@ -50,9 +60,11 @@ router.get('/student', requireAuth, async (req, res, next) => {
 
       // Recent practice sessions
       query(`
-        SELECT id, score, duration_minutes, exercises_count, DATE(created_at) as date
+        SELECT id, session_type, duration_minutes, exercises_total, exercises_correct,
+               CASE WHEN exercises_total > 0 THEN ROUND((exercises_correct::numeric / exercises_total) * 100) ELSE 0 END AS score,
+               DATE(created_at) as date
         FROM practice_sessions
-        WHERE user_id = $1
+        WHERE user_id = $1 AND status = 'completed'
         ORDER BY created_at DESC LIMIT 10
       `, [uid]).catch(() => ({ rows: [] })),
 
@@ -82,10 +94,19 @@ router.get('/student', requireAuth, async (req, res, next) => {
         SELECT 
           COUNT(*)::int as total_sessions,
           COALESCE(SUM(duration_minutes), 0)::int as total_minutes,
-          COALESCE(ROUND(AVG(score), 1), 0) as avg_score
+          COALESCE(ROUND(AVG(CASE WHEN exercises_total > 0 THEN (exercises_correct::numeric / exercises_total) * 100 ELSE 0 END), 1), 0) as avg_score
         FROM practice_sessions
         WHERE user_id = $1
+          AND status = 'completed'
           AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
+      `, [uid]).catch(() => ({ rows: [] })),
+
+      // Test attempts (for Recent Practice and activity tracking)
+      query(`
+        SELECT id, level, score, passed, duration_seconds, created_at
+        FROM test_attempts
+        WHERE user_id = $1
+        ORDER BY created_at DESC LIMIT 10
       `, [uid]).catch(() => ({ rows: [] })),
     ]);
 
@@ -95,16 +116,59 @@ router.get('/student', requireAuth, async (req, res, next) => {
     const categories = categoryRows.rows || [];
     const weekActivity = weekActivityRows.rows || [];
     const totalStats = totalStatsRow.rows[0] || {};
+    const testAttempts = testAttemptsRows.rows || [];
 
     // Build progressHistory from sessions (last 30 days)
-    const progressHistory = sessions.slice(0, 30).reverse().map(s => ({
+    let progressHistory = sessions.slice(0, 30).reverse().map(s => ({
       date: s.date,
       mastery: Number(s.score) || 0,
     }));
+    // Fallback: use test attempts as progress history if no practice sessions
+    if (progressHistory.length === 0 && testAttempts.length > 0) {
+      progressHistory = [...testAttempts].reverse().map(t => ({
+        date: new Date(t.created_at).toISOString().slice(0, 10),
+        mastery: t.score || 0,
+      }));
+    }
+
+    // Merge test attempts into recent sessions if no practice sessions exist
+    let recentActivity = sessions.slice(0, 5).map(s => ({
+      id: s.id,
+      date: s.date,
+      name: s.session_type,
+      score: Number(s.score) || 0,
+      duration: s.duration_minutes || 0,
+      exercises: s.exercises_total || 0,
+      type: 'practice',
+    }));
+    if (recentActivity.length === 0 && testAttempts.length > 0) {
+      recentActivity = testAttempts.slice(0, 5).map(t => ({
+        id: t.id,
+        date: new Date(t.created_at).toISOString().slice(0, 10),
+        score: t.score || 0,
+        duration: Math.round((t.duration_seconds || 0) / 60),
+        exercises: 10,
+        type: 'test',
+        level: t.level,
+        passed: t.passed,
+      }));
+    }
+
+    // Include test attempt days in weekly activity
+    const testDaysThisWeek = testAttempts
+      .filter(t => {
+        const d = new Date(t.created_at);
+        const weekStart = getMonday(new Date());
+        return d >= weekStart;
+      })
+      .map(t => new Date(t.created_at).toISOString().slice(0, 10));
 
     // Build weekDays array (Mon=0 to Sun=6)
     const weekStart = getMonday(new Date());
-    const practicedDays = new Set(weekActivity.map(r => r.day?.toISOString?.().slice(0, 10) || r.day));
+    const practicedDays = new Set([
+      ...weekActivity.map(r => r.day?.toISOString?.().slice(0, 10) || r.day),
+      ...testDaysThisWeek,
+    ]);
     const today = new Date();
     const todayIdx = (today.getDay() + 6) % 7; // Mon=0
     const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -116,11 +180,31 @@ router.get('/student', requireAuth, async (req, res, next) => {
     });
 
     // Build category mastery with trend
-    const categoryMastery = categories.map(c => ({
+    let categoryMastery = categories.map(c => ({
       category: c.category,
       mastery: Number(c.mastery) || 0,
       trend: Number(c.mastery) >= 70 ? 'up' : Number(c.mastery) >= 40 ? 'stable' : 'down',
     }));
+    // Fallback: derive category mastery from test attempts by level
+    if (categoryMastery.length === 0 && testAttempts.length > 0) {
+      const levelScores = {};
+      testAttempts.forEach(t => {
+        if (!levelScores[t.level]) levelScores[t.level] = [];
+        levelScores[t.level].push(t.score || 0);
+      });
+      const LEVEL_CATEGORIES = {
+        1: 'Letter Recognition & Counting',
+        2: 'Rhyming & Number Sense',
+        3: 'Phoneme Blending & Arithmetic',
+        4: 'Reading & Problem Solving',
+        5: 'Critical Thinking & Mastery',
+      };
+      categoryMastery = Object.entries(levelScores).map(([lvl, scores]) => ({
+        category: LEVEL_CATEGORIES[lvl] || `Level ${lvl}`,
+        mastery: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        trend: scores[scores.length - 1] >= 70 ? 'up' : 'stable',
+      }));
+    }
 
     // Determine if test ready (mastery avg > 65%)
     const avgMastery = categoryMastery.length > 0
@@ -129,11 +213,27 @@ router.get('/student', requireAuth, async (req, res, next) => {
 
     const level = student.current_level || 1;
 
+    // Calculate streak from test + practice activity
+    const allActivityDays = new Set([
+      ...sessions.map(s => s.date?.toISOString?.().slice(0, 10) || s.date),
+      ...testAttempts.map(t => new Date(t.created_at).toISOString().slice(0, 10)),
+    ]);
+    const sortedDays = [...allActivityDays].sort().reverse();
+    const streak = student.streak_count || calculateStreak(sortedDays);
+
+    // Calculate combined stats (practice + tests)
+    const testTotalMinutes = testAttempts.reduce((sum, t) => sum + Math.round((t.duration_seconds || 0) / 60), 0);
+    const testAvgScore = testAttempts.length > 0
+      ? Math.round(testAttempts.reduce((sum, t) => sum + (t.score || 0), 0) / testAttempts.length)
+      : 0;
+    const combinedMinutes = (totalStats.total_minutes || 0) + testTotalMinutes;
+    const combinedAvgScore = totalStats.total_sessions > 0 ? Number(totalStats.avg_score) : testAvgScore;
+
     res.json({
       name: student.name || req.user.name || 'Student',
       level,
-      streak: student.streak_count || 0,
-      totalPracticeMinutes: totalStats.total_minutes || 0,
+      streak,
+      totalPracticeMinutes: combinedMinutes,
       mastery: Math.round(avgMastery) || 0,
       ldType: screening.ld_type || student.ld_type || null,
       riskScore: screening.risk_score || student.ld_risk_score || null,
@@ -141,22 +241,16 @@ router.get('/student', requireAuth, async (req, res, next) => {
       weeklyGoal: { target: 5, completed: weekDays.filter(d => d === true).length },
       categoryMastery,
       progressHistory,
-      recentSessions: sessions.slice(0, 5).map(s => ({
-        id: s.id,
-        date: s.date,
-        score: Number(s.score) || 0,
-        duration: s.duration_minutes || 0,
-        exercises: s.exercises_count || 0,
-      })),
+      recentSessions: recentActivity,
       weekDays,
       testReady: avgMastery >= 65 && student.streak_count >= 3,
       totalPractices: totalStats.total_sessions || 0,
-      totalTests: 0, // TODO: count from test_attempts
-      avgScore: Number(totalStats.avg_score) || 0,
+      totalTests: testAttempts.length,
+      avgScore: combinedAvgScore,
       quote: MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)],
     });
   } catch (err) { next(err); }
-});
+}
 
 // ─── GET /parent — Parent scorecard ─────────────────────────────────────
 router.get('/parent', requireAuth, async (req, res, next) => {
@@ -218,6 +312,24 @@ function getMonday(d) {
   const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(date.setDate(diff));
+}
+
+// Calculate consecutive days streak from sorted day strings (newest first)
+function calculateStreak(sortedDays) {
+  if (!sortedDays.length) return 0;
+  const today = new Date().toISOString().slice(0, 10);
+  // If the most recent day isn't today or yesterday, streak is 0
+  const mostRecent = sortedDays[0];
+  const diffMs = new Date(today) - new Date(mostRecent);
+  if (diffMs > 86400000 * 1.5) return 0; // more than ~1.5 days ago
+
+  let streak = 1;
+  for (let i = 1; i < sortedDays.length; i++) {
+    const diff = new Date(sortedDays[i - 1]) - new Date(sortedDays[i]);
+    if (diff <= 86400000 * 1.5) streak++;
+    else break;
+  }
+  return streak;
 }
 
 module.exports = router;

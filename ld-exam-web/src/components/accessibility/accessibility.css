@@ -1,0 +1,62 @@
+/* ─── Accessibility CSS Classes ─────────────────────────────────────
+   These are toggled by AccessibilityToolbar via document.documentElement classes.
+   Import this file in your main CSS/entry point (e.g., index.css or App.jsx).
+*/
+
+/* Dyslexia-Friendly Font — OpenDyslexic or similar */
+.a11y-dyslexia-font,
+.a11y-dyslexia-font * {
+  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Trebuchet MS', sans-serif !important;
+  letter-spacing: 0.05em;
+  word-spacing: 0.15em;
+}
+
+/* Larger Text — scale up all text by ~25% */
+.a11y-large-text {
+  font-size: 125% !important;
+}
+
+.a11y-large-text .text-xs {
+  font-size: 0.875rem !important;
+}
+
+.a11y-large-text .text-sm {
+  font-size: 1rem !important;
+}
+
+.a11y-large-text .text-base {
+  font-size: 1.25rem !important;
+}
+
+.a11y-large-text .text-lg {
+  font-size: 1.5rem !important;
+}
+
+/* High Contrast — darken text, increase border visibility */
+.a11y-high-contrast {
+  --tw-text-opacity: 1;
+}
+
+.a11y-high-contrast body,
+.a11y-high-contrast main {
+  background: #ffffff !important;
+}
+
+.a11y-high-contrast p,
+.a11y-high-contrast span,
+.a11y-high-contrast h1,
+.a11y-high-contrast h2,
+.a11y-high-contrast h3,
+.a11y-high-contrast h4,
+.a11y-high-contrast label,
+.a11y-high-contrast button {
+  color: #000000 !important;
+}
+
+.a11y-high-contrast [class*="border"] {
+  border-color: #000000 !important;
+}
+
+.a11y-high-contrast button[class*="bg-"] {
+  border: 2px solid #000 !important;
+}

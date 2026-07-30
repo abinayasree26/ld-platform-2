@@ -317,6 +317,61 @@ const AdminStudents = () => {
     fetchStudents();
   };
 
+  const handleExportCSV = async () => {
+    try {
+      toast.loading('Generating CSV export file...', { id: 'csv-exp' });
+      const token = localStorage.getItem('auth_token');
+      const resp = await fetch('/api/admin/export/students', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const blob = await resp.blob();
+      toast.dismiss('csv-exp');
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `students_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success('Student roster CSV downloaded!');
+    } catch {
+      toast.dismiss('csv-exp');
+      toast.error('Failed to export CSV');
+    }
+  };
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.loading(`Importing ${file.name}...`, { id: 'csv-imp' });
+      const token = localStorage.getItem('auth_token');
+      const text = await file.text();
+      const rows = text.split('\n').filter((r) => r.trim());
+
+      const resp = await fetch('/api/admin/students/import', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, rows: rows.slice(1) }),
+      });
+      const data = await resp.json();
+      toast.dismiss('csv-imp');
+
+      if (resp.ok) {
+        toast.success(data.message || `Successfully imported students from ${file.name}!`);
+        fetchStudents();
+      } else {
+        toast.error(data.error || 'Failed to import CSV');
+      }
+    } catch {
+      toast.dismiss('csv-imp');
+      toast.error('CSV Import error');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   useEffect(() => { fetchStudents(); }, [page, filterLD, filterSub, filterLevel]);
 
   // Auto-open student detail if ?view=ID is in URL
@@ -342,27 +397,27 @@ const AdminStudents = () => {
             <h2 className="text-xl sm:text-2xl font-black text-[var(--text-main)] tracking-tight">Student Management</h2>
             <p className="text-[var(--text-muted)] text-sm mt-1">{total} total students</p>
           </div>
-          <>
+          <div className="flex items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
               accept=".csv,.xlsx,.xls"
               className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  toast.success(`File selected: ${file.name} — processing (demo)`);
-                  e.target.value = '';
-                }
-              }}
+              onChange={handleImportCSV}
             />
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-200"
             >
-              📥 Import CSV
+              📤 Import Roster
             </button>
-          </>
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2.5 bg-[var(--bg-card)] border border-[var(--border-main)] text-[var(--text-main)] rounded-xl text-xs font-bold hover:border-purple-400 transition"
+            >
+              📥 Export CSV
+            </button>
+          </div>
         </div>
 
         {/* Search & Filters */}

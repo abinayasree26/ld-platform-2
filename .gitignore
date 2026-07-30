@@ -6,6 +6,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+firebase-service-account.json
 
 # Build & output directories
 dist/
@@ -28,3 +29,6 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Stray nested duplicate checkout (not part of the project)
+/ld/

@@ -2,19 +2,62 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../services/authStore';
-import { trackLogin } from '../../services/analytics';
+import { authAPI, complianceAPI } from '../../services/api';
+import { trackLogin, trackDemoLogin } from '../../services/analytics';
+
+const ConsentModal = ({ onAccept }) => (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+      <h2 className="text-lg font-extrabold text-slate-800">Data Privacy Consent</h2>
+      <p className="text-sm text-slate-600 leading-relaxed">
+        LD Support Platform collects and processes student learning data to provide personalised
+        support. This is governed by India's <strong>DPDP Act 2023</strong>.
+      </p>
+      <ul className="text-xs text-slate-500 space-y-1 list-disc list-inside">
+        <li>Learning progress and assessment scores</li>
+        <li>Error patterns for targeted recommendations</li>
+        <li>Usage analytics to improve the platform</li>
+      </ul>
+      <p className="text-xs text-slate-400">
+        You can request data export or account deletion at any time from Settings.
+      </p>
+      <button
+        onClick={onAccept}
+        className="w-full bg-blue-700 text-white font-bold py-3 rounded-xl text-sm hover:bg-blue-800 transition"
+      >
+        I Understand &amp; Agree
+      </button>
+    </div>
+  </div>
+);
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { setDemoAuth } = useAuthStore();
+  const [portalTab, setPortalTab] = useState('student');
+  const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useState('');
+  const [pendingNav, setPendingNav] = useState(null);
+
+  // Form fields
+  const [name, setName]         = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole]         = useState('teacher');
+
+  // Admin form fields
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+
+  const handleConsentAccept = async () => {
+    await complianceAPI.recordConsent('data_processing').catch(() => {});
+    navigate(pendingNav || '/dashboard');
+    setPendingNav(null);
+  };
 
   const handleAdminLogin = async (e) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
+    if (!adminUsername.trim() || !adminPassword.trim()) {
       toast.error('Enter username and password');
       return;
     }
@@ -23,7 +66,7 @@ const LoginPage = () => {
       const resp = await fetch('/api/auth/credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password: password.trim() }),
+        body: JSON.stringify({ username: adminUsername.trim(), password: adminPassword }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Login failed');
@@ -38,73 +81,205 @@ const LoginPage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl w-full max-w-md p-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-purple-500/30 mb-4">
-            L
-          </div>
-          <h1 className="text-3xl font-black text-white mb-1">LD Support</h1>
-          <p className="text-purple-300 text-sm font-medium">Admin Panel</p>
-        </div>
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Login failed');
+      setDemoAuth(data.user, data.token);
+      trackLogin('email', data.user.role);
+      toast.success(`Welcome back, ${data.user.name || 'User'}!`);
+      const dest = data.user.role === 'parent' ? '/parent' : data.user.role === 'student' ? '/student' : '/dashboard';
+      if (data.isNewUser) setPendingNav(dest);
+      else navigate(dest);
+    } catch (err) {
+      toast.error(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        {/* Login Form */}
-        <form onSubmit={handleAdminLogin} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider mb-2">Username</label>
-            <input
-              type="text"
-              placeholder="admin"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder:text-white/40 focus:outline-none focus:border-purple-400 focus:bg-white/15 transition"
-              required
-            />
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    setLoading(true);
+    try {
+      const resp = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, role }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Registration failed');
+      setDemoAuth(data.user, data.token);
+      toast.success('Account created! Welcome.');
+      const dest = data.user.role === 'parent' ? '/parent' : data.user.role === 'student' ? '/student' : '/dashboard';
+      setPendingNav(dest);
+    } catch (err) {
+      toast.error(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      {pendingNav && <ConsentModal onAccept={handleConsentAccept} />}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-black text-blue-800 mb-2">LD Support</h1>
+            <p className="text-slate-500 font-medium">School Platform</p>
           </div>
-          <div>
-            <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider mb-2">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder:text-white/40 focus:outline-none focus:border-purple-400 focus:bg-white/15 transition pr-12"
-                required
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition">
-                {showPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                )}
+
+          {/* Portal tabs */}
+          <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+            {['student', 'admin'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => { setPortalTab(tab); setMode('login'); }}
+                className={`flex-1 py-2 px-1 rounded-lg text-xs font-bold transition-all capitalize ${
+                  portalTab === tab
+                    ? 'bg-white shadow-sm ' + (tab === 'admin' ? 'text-purple-700' : 'text-orange-600')
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {tab === 'student' ? '🎒' : '🔑'} {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Admin form */}
+          {portalTab === 'admin' && (
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Username</label>
+                <input
+                  type="text"
+                  placeholder="admin"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-500 transition-colors"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-500 transition-colors"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-purple-200 transition-all disabled:bg-purple-300"
+              >
+                {loading ? 'Signing in…' : 'Sign In as Admin'}
+              </button>
+            </form>
+          )}
+
+          {/* Student form — email+password only, no registration */}
+          {portalTab === 'student' && (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-xs text-orange-700 font-medium">
+                Students: log in with the email your teacher used to invite you.
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Email</label>
+                <input
+                  type="email"
+                  placeholder="your@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700">Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-orange-200 transition-all disabled:bg-orange-300"
+              >
+                {loading ? 'Signing in…' : 'Student Login'}
+              </button>
+              <p className="text-center text-xs text-slate-400">
+                First time? Check your email for an invite link from your teacher.
+              </p>
+            </form>
+          )}
+
+          {/* Demo button for quick access */}
+          {portalTab === 'student' && (
+            <div className="mt-4">
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400">Or for testing</span></div>
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const result = await authAPI.demo('student');
+                    setDemoAuth(
+                      {
+                        id: 'demo-student',
+                        name: 'Demo Student',
+                        role: 'student',
+                        school_id: 'demo-school',
+                        email: 'demo.student@ldsupport.in',
+                        phone: '+91 98765 43210',
+                        class: 'Class 5 - A',
+                        school: 'Sunrise Public School',
+                        board: 'CBSE',
+                        subscription: 'advanced',
+                        ...result.user,
+                      },
+                      result.token
+                    );
+                    trackDemoLogin('student');
+                    toast.success('Demo Student — entering dashboard');
+                    navigate('/student');
+                  } catch {
+                    toast.error('Could not start demo session');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full border-2 border-slate-100 hover:border-orange-200 hover:bg-orange-50 text-orange-700 font-bold py-3 rounded-xl transition-all text-sm"
+              >
+                🎒 Demo Student
               </button>
             </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 rounded-xl text-lg shadow-xl shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
-
-        {/* Footer */}
-        <p className="text-center text-white/30 text-xs mt-6">
-          LD Support Platform • Admin Access Only
-        </p>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

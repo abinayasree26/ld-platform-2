@@ -149,5 +149,45 @@ router.post('/read-all', requireAuth, async (req, res) => {
     res.json({ success: true });
   }
 });
+// In-memory token store for demo/development mode
+const demoDeviceTokens = new Set(['demo-fcm-token-123']);
+
+// Register FCM Device Push Token
+router.post('/register-token', requireAuth, async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'FCM token required' });
+
+  try {
+    await query(
+      `INSERT INTO user_fcm_tokens (user_id, token, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id, token) DO UPDATE SET updated_at = NOW()`,
+      [req.user.id, token]
+    );
+  } catch {
+    demoDeviceTokens.add(token);
+  }
+
+  res.json({ ok: true, message: 'FCM token registered successfully' });
+});
+
+// Broadcast Push Notification (Admin)
+router.post('/broadcast', requireAuth, async (req, res) => {
+  const { title, body, targetRole = 'all' } = req.body;
+  if (!title || !body) return res.status(400).json({ error: 'Title and body required' });
+
+  const { sendPushNotification } = require('../../config/firebase');
+
+  let tokens = Array.from(demoDeviceTokens);
+  try {
+    const { rows } = await query(`SELECT token FROM user_fcm_tokens`);
+    if (rows.length) tokens = rows.map((r) => r.token);
+  } catch {
+    /* Use demo tokens */
+  }
+
+  const result = await sendPushNotification(tokens, { title, body }, { targetRole });
+  res.json({ ok: true, message: `Broadcast push sent to ${tokens.length} device(s)`, result });
+});
 
 module.exports = router;

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../../services/authStore';
-import { maxUnlockedLevel } from '../subscriptionPlans';
+import { ldAPI } from '../../../services/api';
+import { maxUnlockedLevel } from '../../../data/subscriptionPlans';
 import LevelAvatar from '../../../components/LevelAvatar';
+import AboutIcon from '../../../components/AboutIcon';
 
 const LEVEL_INFO = {
   1: { label: 'Starter', emoji: '🌱', bg: 'bg-green-50', border: 'border-green-200', accent: 'text-green-700', btn: 'bg-green-600 hover:bg-green-700', desc: 'Basic letters, sounds & number counting' },
@@ -42,19 +44,54 @@ const StudentTestLevels = ({ onStart }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const planMax = maxUnlockedLevel(user?.subscription || 'advanced');
-  // Full attempt log — every test taken, including retests — oldest first ("first to till").
-  const testHistory = [...(user?.test_history?.length ? user.test_history : DEFAULT_TEST_HISTORY)]
-    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
   const [levels, setLevels] = useState([]);
+  const [testHistory, setTestHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    fetch('/api/ld/tests/levels', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then(({ levels: lvls }) => setLevels(lvls && lvls.length ? lvls : DEMO_LEVELS))
-      .catch(() => setLevels(DEMO_LEVELS))
-      .finally(() => setLoading(false));
+    Promise.all([
+      ldAPI.testLevels().catch(() => ({ levels: null })),
+      ldAPI.testHistory().catch(() => ({ attempts: [] })),
+    ]).then(([levelsRes, historyRes]) => {
+      const lvls = levelsRes?.levels;
+      let finalLevels = lvls && lvls.length ? lvls : DEMO_LEVELS;
+
+      // Override with local progress — if user has passed higher levels locally
+      const highestPassed = user?.highestPassedLevel || 0;
+      if (highestPassed > 0) {
+        finalLevels = finalLevels.map(l => {
+          if (l.level <= highestPassed) {
+            return { ...l, unlocked: true, everPassed: true, isCurrent: false };
+          } else if (l.level === highestPassed + 1) {
+            return { ...l, unlocked: true, isCurrent: true, everPassed: false };
+          }
+          return l;
+        });
+      }
+
+      setLevels(finalLevels);
+
+      // Map backend test_attempts to the format the UI expects
+      const attempts = historyRes?.attempts || [];
+      let history = [];
+      if (attempts.length > 0) {
+        history = attempts.map(a => ({
+          id: a.id,
+          level: a.level,
+          dateTime: a.created_at || a.date,
+          scorePercent: a.score,
+          passed: a.passed,
+          correctCount: a.correctCount || Math.round((a.score / 100) * 10),
+          totalQuestions: a.totalQuestions || 10,
+          timeTakenSeconds: a.duration_seconds || a.timeTakenSeconds || 0,
+        }));
+      }
+      // Merge any locally-stored attempts (from this session) that aren't in backend response
+      const localHistory = user?.test_history || [];
+      const allIds = new Set(history.map(h => h.id));
+      const merged = [...history, ...localHistory.filter(h => !allIds.has(h.id))];
+      setTestHistory(merged.length > 0 ? merged.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)) : DEFAULT_TEST_HISTORY);
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) {
@@ -66,27 +103,34 @@ const StudentTestLevels = ({ onStart }) => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       <button
         onClick={() => navigate(-1)}
-        className="bg-white border border-slate-200 text-slate-600 text-sm font-bold px-4 py-2 rounded-xl shadow-sm mb-6"
+        className="bg-indigo-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm mb-4 text-xs hover:bg-indigo-700 transition"
       >
-        Back
+        ← Back
       </button>
       {/* Header */}
-      <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-slate-800">Level Tests</h2>
+      <div className="mb-5">
+        <h2 className="text-xl font-extrabold text-slate-800" style={{ display: 'flex', alignItems: 'center' }}>
+          Level Tests
+          <AboutIcon
+            title="About Level Tests"
+            description="Take tests to prove your skills and unlock higher levels."
+            items={['Score 70% or above to pass', '20 questions per test', 'Unlock the next level when you pass', 'Retry anytime to improve your score']}
+          />
+        </h2>
         <p className="text-slate-500 text-base mt-2">
           Score <strong>70% or above</strong> to pass and unlock the next level. 20 questions per test.
         </p>
       </div>
 
       {/* ═══ TWO CONTAINERS: Level Tests + Test History (same size) ═══ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
 
       {/* ═══ LEFT: Level cards + info ═══ */}
       <div className="flex flex-col">
-      <div className="space-y-5">
+      <div className="space-y-3">
         {levels.map((lvl) => {
           const info = LEVEL_INFO[lvl.level];
           const planLocked = lvl.level > planMax;
@@ -188,7 +232,7 @@ const StudentTestLevels = ({ onStart }) => {
 
       {/* ═══ RIGHT: Test History — every attempt, including retests, first to till ═══ */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6 flex flex-col">
-        <h3 className="text-lg font-extrabold text-slate-800 mb-1">Test History</h3>
+        <h3 className="text-base font-extrabold text-slate-800 mb-1">Test History</h3>
         <p className="text-xs text-slate-400 mb-4">Every test you've taken — including retests — from first to most recent.</p>
 
         {testHistory.length === 0 ? (

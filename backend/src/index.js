@@ -12,13 +12,31 @@ const app = express();
 // ── Security & parsing ────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({ origin: env.cors.origins, credentials: true }));
-app.use(express.json({ limit: '10mb' }));
+const { xssSanitizer } = require('./middleware/xss.middleware');
+
+app.use(express.json({ limit: '10mb', verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({ extended: true }));
+app.use(xssSanitizer);
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-const apiLimiter  = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 60_000, max: 20,  standardHeaders: true, legacyHeaders: false });
+const isDev = env.nodeEnv === 'development' || env.demoMode;
+const apiLimiter  = rateLimit({
+  windowMs: 60_000,
+  max: isDev ? 5000 : 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.demoMode || isDev,
+  message: { error: 'Too many requests. Please try again in a minute.' },
+});
+const authLimiter = rateLimit({
+  windowMs: 60_000,
+  max: isDev ? 1000 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => env.demoMode || isDev,
+  message: { error: 'Too many login attempts. Please wait a minute and try again.' },
+});
 
 app.use('/api/', apiLimiter);
 app.use('/api/auth/', authLimiter);
@@ -51,10 +69,15 @@ if (env.demoMode) {
   app.use('/api/tests', requireAuth, demoTests);
   app.use('/api/ld/tests', requireAuth, demoTests);
 
-  // LD Chatbot (works in both demo and production — uses Claude directly)
+  // LD Chatbot (works in both demo and production — uses llama.cpp directly)
   app.use('/api/ld/chat', requireAuth, require('./routes/ld/chat'));
 
   app.use('/api/ld/notifications', requireAuth, require('./routes/ld/notifications'));
+  app.use('/api/ld/push', requireAuth, require('./routes/ld/push'));
+
+  // STT — Offline speech-to-text via local Whisper.cpp
+  app.use('/api/ld/stt', requireAuth, require('./routes/ld/stt'));
+
   // LD Analytics (demo mode — returns demo data same shape as production)
   app.use('/api/ld/analytics', requireAuth, demoAnalytics);
 
@@ -66,6 +89,9 @@ if (env.demoMode) {
 
   // Admin management (demo data)
   app.use('/api/admin', requireAuth, demoAdmin);
+
+  // Payments router (Razorpay order & verify)
+  app.use('/api/payments', require('./routes/shared/payments'));
 
   // Catch-all for other /api/ld/* routes
   app.use('/api/ld', requireAuth, (req, res) => {
@@ -140,6 +166,8 @@ if (env.demoMode) {
   app.use('/api/ld/chat',              require('./routes/ld/chat'));
   app.use('/api/ld/analytics',         require('./routes/ld/analytics'));
   app.use('/api/ld/notifications',     require('./routes/ld/notifications'));
+  app.use('/api/ld/push',              require('./routes/ld/push'));
+  app.use('/api/ld/stt',               require('./routes/ld/stt'));
 
   // Run migrations on startup
   async function runStartupMigrations() {
@@ -158,7 +186,13 @@ if (env.demoMode) {
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(env.port, () => {
-  console.log(`[App] API running on port ${env.port} (${env.nodeEnv}${env.demoMode ? ' — DEMO MODE' : ''})`);
+// ── Start HTTP & WebSocket Server ──────────────────────────────────────────────
+const http = require('http');
+const { initSocketService } = require('./services/socket.service');
+
+const server = http.createServer(app);
+initSocketService(server);
+
+server.listen(env.port, () => {
+  console.log(`[App] API & WebSockets running on port ${env.port} (${env.nodeEnv}${env.demoMode ? ' — DEMO MODE' : ''})`);
 });

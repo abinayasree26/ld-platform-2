@@ -1,5 +1,5 @@
 /**
- * Rule-based LD classifier — fallback when Claude AI is unavailable.
+ * Rule-based LD classifier — fallback when the AI (llama.cpp) is unavailable.
  * Scores answers by category and determines LD type.
  */
 

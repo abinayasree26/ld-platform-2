@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { query } = require('../config/database');
-const { generateStudentTips } = require('../services/claudeService');
+const { generateStudentTips } = require('../services/llamaService');
 
 // Reset daily streaks for inactive students
 async function resetInactiveStreaks() {
@@ -130,6 +130,33 @@ async function sendStreakReminders() {
   console.log(`[Cron] Sent streak reminders to ${rows.length} students`);
 }
 
+// Send subscription expiry warning emails (runs daily at 08:00 AM)
+async function checkSubscriptionExpirations() {
+  const { sendExpiryReminderEmail } = require('../services/email.service');
+  if (process.env.DEMO_MODE === 'true') {
+    console.log('[Cron] Subscription expiry check completed (Demo Mode)');
+    return;
+  }
+  try {
+    const { rows } = await query(
+      `SELECT u.email, u.name, po.plan_type,
+              EXTRACT(DAY FROM (po.expires_at - NOW()))::int AS days_remaining
+       FROM payment_orders po
+       JOIN users u ON u.id = po.user_id
+       WHERE po.status = 'paid'
+         AND po.expires_at > NOW()
+         AND po.expires_at <= NOW() + INTERVAL '7 days'`
+    );
+
+    for (const sub of rows) {
+      await sendExpiryReminderEmail(sub.email, sub.name, sub.plan_type, sub.days_remaining).catch(() => {});
+    }
+    console.log(`[Cron] Sent subscription expiry warnings to ${rows.length} users`);
+  } catch (err) {
+    console.error('[Cron Expiry Warning Error]:', err.message);
+  }
+}
+
 function startCronJobs() {
   // Every day at 01:00
   cron.schedule('0 1 * * *', () => resetInactiveStreaks().catch(console.error));
@@ -139,9 +166,19 @@ function startCronJobs() {
   cron.schedule('0 6 * * 1', () => generateWeeklyRecommendations().catch(console.error));
   // Every day at 07:00
   cron.schedule('0 7 * * *', () => notifyInactiveStudents().catch(console.error));
+  // Every day at 08:00 — subscription expiry reminders
+  cron.schedule('0 8 * * *', () => checkSubscriptionExpirations().catch(console.error));
   // Every day at 16:00 (4 PM) — streak reminders
   cron.schedule('0 16 * * *', () => sendStreakReminders().catch(console.error));
   console.log('[Cron] Jobs scheduled');
 }
 
-module.exports = { startCronJobs, resetInactiveStreaks, flagRescreening, generateWeeklyRecommendations, notifyInactiveStudents, sendStreakReminders };
+module.exports = {
+  startCronJobs,
+  resetInactiveStreaks,
+  flagRescreening,
+  generateWeeklyRecommendations,
+  notifyInactiveStudents,
+  sendStreakReminders,
+  checkSubscriptionExpirations,
+};

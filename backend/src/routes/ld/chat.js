@@ -1,5 +1,5 @@
 /**
- * LD Chatbot Route — AI-powered student assistant using Claude
+ * LD Chatbot Route — AI-powered student assistant using local llama.cpp
  * 
  * POST /api/ld/chat
  *   Body: { message: string, history?: [{role, text}] }
@@ -12,13 +12,9 @@
  */
 
 const router = require('express').Router();
-const Anthropic = require('@anthropic-ai/sdk');
+const llamaService = require('../../services/llamaService');
 const { query } = require('../../config/database');
 const { requireAuth } = require('../../middleware/auth');
-
-const client = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
 
 // ─── Gather student context from DB ─────────────────────────────────────
 async function getStudentContext(userId) {
@@ -56,7 +52,7 @@ async function getStudentContext(userId) {
   }
 }
 
-// ─── Fallback responses when Claude is unavailable ──────────────────────
+// ─── Fallback responses when the AI is unavailable ──────────────────────
 function getFallbackResponse(message) {
   const msg = message.toLowerCase();
   if (msg.includes('progress') || msg.includes('status')) {
@@ -80,8 +76,8 @@ router.post('/', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'message is required' });
     }
 
-    // If Claude is not configured, use fallback
-    if (!client) {
+    // If llama.cpp isn't running, use fallback
+    if (!(await llamaService.isAvailable())) {
       return res.json(getFallbackResponse(message));
     }
 
@@ -134,14 +130,16 @@ Respond in plain text. Keep it conversational and warm.`;
     }
     messages.push({ role: 'user', content: message.trim() });
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+    const reply = await llamaService.chatCompletion({
       messages,
+      systemPrompt,
+      maxTokens: 300,
+      temperature: 0.8,
     });
 
-    const reply = response.content[0].text.trim();
+    if (!reply) {
+      return res.json(getFallbackResponse(message));
+    }
 
     // Generate contextual suggestions
     const suggestions = generateSuggestions(message, ctx);

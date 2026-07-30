@@ -6,11 +6,20 @@ const PASS_THRESHOLD = 70;
 
 const StudentTestResult = ({ result, level, onRetry, onDone }) => {
   const [showReview, setShowReview] = useState(false);
-  const { scorePercent, correctCount, totalQuestions, passed, leveledUp, scoredAnswers = [], timeTakenSeconds } = result;
+  const { scorePercent, correctCount, totalQuestions, passed, leveledUp, scoredAnswers, review, timeTakenSeconds } = result;
+
+  // Backend sends 'review' array, component uses 'scoredAnswers' format
+  const answers = scoredAnswers || (review || []).map(r => ({
+    question_text: r.question_text,
+    isCorrect: r.is_correct,
+    studentAnswer: r.your_answer,
+    correctAnswer: r.correct_answer,
+    aiFeedback: r.feedback,
+  }));
 
   const mins = Math.floor((timeTakenSeconds || 0) / 60);
   const secs = (timeTakenSeconds || 0) % 60;
-  const wrongAnswers = scoredAnswers.filter((a) => !a.isCorrect);
+  const wrongAnswers = answers.filter((a) => !a.isCorrect);
 
   const scoreColor = passed ? 'text-green-600' : 'text-red-500';
   const heroBg = passed ? 'from-green-50 to-emerald-50 border-green-200' : 'from-red-50 to-orange-50 border-red-200';

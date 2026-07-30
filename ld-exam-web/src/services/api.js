@@ -127,6 +127,26 @@ export const paymentsAPI = {
   getSubscription: (schoolId) => api.get(`/payments/subscription/${schoolId}`),
 };
 
+export const ldAPI = {
+  // Screening
+  screeningStatus: () => api.get('/ld/screening/status'),
+  screeningQuestions: () => api.get('/ld/screening/questions'),
+  screeningSubmit: (answers, durationSeconds) =>
+    api.post('/ld/screening/submit', { answers, duration_seconds: durationSeconds }),
+
+  // Level Tests
+  testLevels: () => api.get('/ld/tests/levels'),
+  testQuestions: (level) => api.get(`/ld/tests/questions?level=${level}`),
+  testSubmit: (level, answers, timeTakenMs) =>
+    api.post('/ld/tests/submit', { level, answers, time_taken_ms: timeTakenMs }),
+  testHistory: () => api.get('/ld/tests/history'),
+  practiceHistory: () => api.get('/ld/practice/history'),
+  practiceSubmit: (data) => api.post('/ld/practice/quick-submit', data),
+
+  // Chat
+  chat: (message, history) => api.post('/ld/chat', { message, history }),
+};
+
 export const complianceAPI = {
   recordConsent: (consentType = 'data_processing') =>
     api.post('/ld/compliance/consent', { consentType, granted: true }),

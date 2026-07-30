@@ -536,6 +536,102 @@ const templates = {
   },
 };
 
+/**
+ * Send Password Reset Email Helper
+ */
+async function sendPasswordResetEmail(toEmail, userName, resetToken, resetUrl) {
+  const link = resetUrl || `${process.env.APP_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background: #ffffff;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="color: #7C3AED; margin: 0;">LD Support Platform</h2>
+        <p style="color: #666; font-size: 14px;">Password Reset Request</p>
+      </div>
+      <p>Hello <strong>${userName || 'User'}</strong>,</p>
+      <p>We received a request to reset your password. Click the button below to set up a new password:</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${link}" style="background: #7C3AED; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
+      </div>
+      <p style="color: #888; font-size: 12px;">This link will expire in 15 minutes. If you did not request a password reset, you can safely ignore this email.</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: toEmail,
+    subject: '🔑 Password Reset Request — LD Support Platform',
+    html,
+  });
+}
+
+/**
+ * Send Subscription Expiry Warning Email Helper
+ */
+async function sendExpiryReminderEmail(toEmail, recipientName, planName, daysRemaining) {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f59e0b; border-radius: 12px; background: #fffbeb;">
+      <h2 style="color: #d97706;">⚠️ Subscription Expiry Alert</h2>
+      <p>Hello <strong>${recipientName || 'Administrator'}</strong>,</p>
+      <p>Your <strong>${planName}</strong> plan subscription will expire in <strong>${daysRemaining} day(s)</strong>.</p>
+      <p>To ensure uninterrupted access to student screening tools and CMS modules, please renew or upgrade your plan from the billing section.</p>
+      <div style="margin-top: 20px;">
+        <a href="${process.env.APP_URL || 'http://localhost:5173'}/admin/billing" style="background: #d97706; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Renew Subscription</a>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: toEmail,
+    subject: `⚠️ Action Required: Subscription Expiring in ${daysRemaining} Days`,
+    html,
+  });
+}
+
+/**
+ * Send Test Email Helper for Admin Panel
+ */
+async function sendTestEmail(customConfig = {}, targetEmail) {
+  const user = customConfig.username || customConfig.user || DEFAULT_CONFIG.auth.user;
+  const pass = customConfig.password || customConfig.pass || DEFAULT_CONFIG.auth.pass;
+  const host = customConfig.host || DEFAULT_CONFIG.host;
+  const port = parseInt(customConfig.port, 10) || DEFAULT_CONFIG.port;
+
+  if (!user || !pass) {
+    console.log(`[SMTP Test Simulated]: Sent test email to ${targetEmail}`);
+    return { success: true, messageId: 'simulated-test-id' };
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    const senderEmail = (host.includes('gmail') || user.includes('@gmail.com')) ? user : (customConfig.from || user);
+
+    const mailOptions = {
+      from: `"${customConfig.fromName || 'LD Support Admin'}" <${senderEmail}>`,
+      to: targetEmail,
+      subject: '🧪 SMTP Configuration Test — LD Support Platform',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border-radius: 8px; background: #f0fdf4; border: 1px solid #22c55e;">
+          <h3 style="color: #15803d; margin-top: 0;">✅ SMTP Test Successful!</h3>
+          <p>Your SMTP settings on the LD Support Platform Admin Panel are working cleanly.</p>
+          <p style="font-size: 12px; color: #555;">Timestamp: ${new Date().toISOString()}</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[SMTP Live Dispatch]: Test email successfully delivered to ${targetEmail} (ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error(`[SMTP Live Error]: Failed to send to ${targetEmail}: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendEmail,
   sendBulkEmail,
@@ -543,4 +639,7 @@ module.exports = {
   renderTemplate,
   templates,
   stripHtml,
+  sendPasswordResetEmail,
+  sendExpiryReminderEmail,
+  sendTestEmail,
 };

@@ -12,7 +12,7 @@ const { v4: uuid } = require('uuid');
 const { query } = require('../config/database');
 const exerciseSelector = require('./exerciseSelector');
 const spacedRepetition = require('./spacedRepetition');
-const { generateWrongAnswerFeedback } = require('./claudeService');
+const { generateWrongAnswerFeedback } = require('./llamaService');
 
 // ─── Constants ─────────────────────────────────────────────────────
 const SESSION_EXERCISE_COUNT = 20;

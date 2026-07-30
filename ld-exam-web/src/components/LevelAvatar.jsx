@@ -1,5 +1,5 @@
 import React from 'react';
-import { getLevelAvatar, avatarImageUrl } from '../pages/student/avatarSystem';
+import { getLevelAvatar, avatarImageUrl } from '../data/avatarSystem';
 
 const LevelAvatar = ({ level, size = 56, locked = false, showBadge = true }) => {
   const info = getLevelAvatar(level);

@@ -35,6 +35,96 @@ const AdminBilling = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleRazorpayCheckout = async (plan) => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      toast.loading(`Creating ${plan.name} payment order…`, { id: 'rzp' });
+
+      const resp = await fetch('/api/payments/order', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ amount: plan.price || 499, planType: plan.id }),
+      });
+      const orderData = await resp.json();
+      if (!resp.ok) throw new Error(orderData.error || 'Failed to create payment order');
+
+      toast.dismiss('rzp');
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'LD Support Platform',
+        description: `Subscription: ${plan.name}`,
+        order_id: orderData.orderId,
+        handler: async function (response) {
+          toast.loading('Verifying payment signature…', { id: 'verify' });
+          const verifyResp = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(response),
+          });
+          const verifyData = await verifyResp.json();
+          toast.dismiss('verify');
+
+          if (verifyResp.ok) {
+            toast.success(`Payment Successful for ${plan.name}!`);
+          } else {
+            toast.error(verifyData.error || 'Payment verification failed');
+          }
+        },
+        prefill: {
+          name: 'School Administrator',
+          email: 'admin@ldschools.in',
+        },
+        theme: {
+          color: '#7C3AED',
+        },
+      };
+
+      const isTestKey = !orderData.keyId || orderData.keyId.includes('demoKey') || orderData.demoMode;
+
+      if (!isTestKey && window.Razorpay) {
+        const rzpModal = new window.Razorpay(options);
+        rzpModal.open();
+      } else {
+        // Test / Demo Mode Verification Flow
+        if (window.confirm(`[Razorpay Payment Test Mode]\n\nPlan: ${plan.name}\nAmount: ₹${plan.price}\nOrder ID: ${orderData.orderId}\n\nClick OK to simulate successful payment verification.`)) {
+          toast.loading('Verifying payment signature…', { id: 'verify' });
+          const verifyResp = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              razorpay_order_id: orderData.orderId,
+              razorpay_payment_id: `pay_test_${Math.random().toString(36).substring(7)}`,
+              razorpay_signature: 'test_demo_signature',
+            }),
+          });
+          const verifyData = await verifyResp.json();
+          toast.dismiss('verify');
+
+          if (verifyResp.ok) {
+            toast.success(`💳 Payment Successful for ${plan.name}!`);
+          } else {
+            toast.error(verifyData.error || 'Payment verification failed');
+          }
+        }
+      }
+    } catch (err) {
+      toast.dismiss('rzp');
+      toast.error(err.message || 'Payment processing error');
+    }
+  };
+
   const handleExtend = async (name) => {
     if (!window.confirm(`Extend subscription for "${name}" by 30 days?`)) return;
     const token = localStorage.getItem('auth_token');
@@ -67,21 +157,29 @@ const AdminBilling = () => {
     <Layout>
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-end justify-between pb-4 border-b border-[var(--border-main)]">
+        <div className="flex items-end justify-between pb-4 border-b border-[var(--border-main)] flex-wrap gap-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-[var(--text-main)] tracking-tight">Subscription & Billing</h2>
             <p className="text-[var(--text-muted)] text-sm mt-1">Revenue, payments, and plan management</p>
           </div>
-          <button onClick={() => {
-            const headers = 'Student,Email,Amount,Plan,Status,Date,Method\n';
-            const rows = (recentPayments || []).map(p => `${p.student},${p.email},₹${p.amount},${p.plan},${p.status},${p.date},${p.method}`).join('\n');
-            const blob = new Blob([headers + rows], { type: 'text/csv' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = `payments_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
-            toast.success('Payment history downloaded!');
-          }} className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl text-xs font-bold text-[var(--text-muted)] hover:border-purple-400 hover:text-purple-600 transition">
-            📥 Export Payments
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleRazorpayCheckout({ id: 'monthly', name: 'Monthly', price: 199 })}
+              className="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-extrabold hover:bg-purple-700 transition shadow-md shadow-purple-600/20 flex items-center gap-1.5"
+            >
+              💳 Test Razorpay Payment
+            </button>
+            <button onClick={() => {
+              const headers = 'Student,Email,Amount,Plan,Status,Date,Method\n';
+              const rows = (recentPayments || []).map(p => `${p.student},${p.email},₹${p.amount},${p.plan},${p.status},${p.date},${p.method}`).join('\n');
+              const blob = new Blob([headers + rows], { type: 'text/csv' });
+              const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+              a.download = `payments_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+              toast.success('Payment history downloaded!');
+            }} className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl text-xs font-bold text-[var(--text-muted)] hover:border-purple-400 hover:text-purple-600 transition">
+              📥 Export Payments
+            </button>
+          </div>
         </div>
 
         {/* Revenue Stats */}
@@ -94,28 +192,40 @@ const AdminBilling = () => {
         </div>
 
         {/* Plans Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
           {plans?.map((plan) => (
-            <div key={plan.id} className={`bg-[var(--bg-card)] rounded-2xl p-5 border-2 ${plan.id === 'annual' ? 'border-purple-400' : 'border-[var(--border-main)]'} relative`}>
-              {plan.id === 'annual' && (
-                <span className="absolute -top-2.5 left-4 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Best Value</span>
-              )}
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-black text-[var(--text-main)]">{plan.name}</h3>
-                <span className="text-xl font-black text-purple-600">
-                  {plan.price === 0 ? 'Free' : `₹${plan.price}`}
-                  {plan.period && <span className="text-xs font-bold text-[var(--text-muted)]">/{plan.period}</span>}
-                </span>
+            <div key={plan.id} className={`bg-[var(--bg-card)] rounded-2xl p-5 border-2 ${plan.id === 'annual' ? 'border-purple-500 shadow-lg shadow-purple-900/20' : 'border-[var(--border-main)]'} relative flex flex-col justify-between h-full`}>
+              <div>
+                {plan.id === 'annual' && (
+                  <span className="absolute -top-2.5 left-4 bg-purple-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow">Best Value</span>
+                )}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-black text-[var(--text-main)]">{plan.name}</h3>
+                  <span className="text-xl font-black text-purple-600">
+                    {plan.price === 0 ? 'Free' : `₹${plan.price}`}
+                    {plan.period && <span className="text-xs font-bold text-[var(--text-muted)]">/{plan.period}</span>}
+                  </span>
+                </div>
+                <p className="text-xl sm:text-2xl font-black text-[var(--text-main)] mb-1">{plan.students}</p>
+                <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-4">students on this plan</p>
+                <ul className="space-y-2 mb-4">
+                  {plan.features.map(f => (
+                    <li key={f} className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 font-medium">
+                      <span className="text-emerald-500 font-bold">✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <p className="text-xl sm:text-2xl font-black text-[var(--text-main)] mb-2">{plan.students}</p>
-              <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase mb-3">students on this plan</p>
-              <ul className="space-y-1">
-                {plan.features.map(f => (
-                  <li key={f} className="text-xs text-[var(--text-muted)] flex items-center gap-1.5">
-                    <span className="text-emerald-500">✓</span> {f}
-                  </li>
-                ))}
-              </ul>
+              {plan.price > 0 && (
+                <div className="pt-3 border-t border-[var(--border-main)] mt-2">
+                  <button
+                    onClick={() => handleRazorpayCheckout(plan)}
+                    className="w-full py-2 bg-purple-600/10 hover:bg-purple-600 hover:text-white border border-purple-500/30 text-purple-400 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5"
+                  >
+                    💳 Test {plan.name} Plan (₹{plan.price})
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { trackTestStarted, trackTestCompleted, trackTestAbandoned } from '../../../services/analytics';
+import { ldAPI } from '../../../services/api';
 
 const LEVEL_LABELS = ['', 'Starter', 'Basic', 'Intermediate', 'Advanced', 'Mastery'];
 const LEVEL_COLORS = ['', 'bg-green-600', 'bg-blue-600', 'bg-orange-500', 'bg-purple-600', 'bg-amber-500'];
@@ -226,17 +227,8 @@ const StudentTestQuiz = ({ level, onResult, onBack }) => {
     clearInterval(timerRef.current);
     const timeTakenMs = Date.now() - startTime.current;
     try {
-      const resp = await fetch('/api/ld/tests/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          level,
-          answers: Object.entries(finalAnswers).map(([questionId, studentAnswer]) => ({ questionId, studentAnswer })),
-          time_taken_ms: timeTakenMs,
-        }),
-      });
-      const result = await resp.json();
-      if (!resp.ok) throw new Error(result.error || 'Submit failed');
+      const answers = Object.entries(finalAnswers).map(([questionId, studentAnswer]) => ({ questionId, studentAnswer }));
+      const result = await ldAPI.testSubmit(level, answers, timeTakenMs);
       trackTestCompleted(level, result.score, result.passed, timeTakenMs);
       onResult(result);
     } catch {
@@ -247,8 +239,7 @@ const StudentTestQuiz = ({ level, onResult, onBack }) => {
   }, [level, submitting, token, onResult, questions]);
 
   useEffect(() => {
-    fetch(`/api/ld/tests/questions?level=${level}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
+    ldAPI.testQuestions(level)
       .then(({ questions: qs, error }) => {
         if (error || !qs || qs.length === 0) { setQuestions(buildDemoQuestions()); setLoading(false); trackTestStarted(level); return; }
         setQuestions(qs);

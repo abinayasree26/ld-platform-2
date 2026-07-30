@@ -1,28 +1,36 @@
 import { create } from 'zustand';
 
-const useThemeStore = create((set) => ({
-  isDark: localStorage.getItem('theme') === 'dark',
-  
+const useThemeStore = create((set, get) => ({
+  // 'light' or 'dark'
+  mode: localStorage.getItem('ld-theme-mode') || 'light',
+  // 'small', 'medium', 'big'
+  fontSize: localStorage.getItem('ld-font-size') || 'medium',
+  // derived boolean for teacher portal
+  isDark: (localStorage.getItem('ld-theme-mode') || 'light') === 'dark',
+
+  // Student portal methods
+  toggleMode: () => set((state) => {
+    const next = state.mode === 'light' ? 'dark' : 'light';
+    localStorage.setItem('ld-theme-mode', next);
+    return { mode: next, isDark: next === 'dark' };
+  }),
+
+  setFontSize: (size) => set(() => {
+    localStorage.setItem('ld-font-size', size);
+    return { fontSize: size };
+  }),
+
+  // Teacher portal compatibility
   toggleTheme: () => set((state) => {
-    const newDark = !state.isDark;
-    localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    if (newDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    return { isDark: newDark };
+    const next = state.mode === 'light' ? 'dark' : 'light';
+    localStorage.setItem('ld-theme-mode', next);
+    return { mode: next, isDark: next === 'dark' };
   }),
 
   initTheme: () => {
-    const dark = localStorage.getItem('theme') === 'dark';
-    if (dark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    set({ isDark: dark });
-  }
+    const saved = localStorage.getItem('ld-theme-mode') || 'light';
+    set({ mode: saved, isDark: saved === 'dark' });
+  },
 }));
 
 export default useThemeStore;

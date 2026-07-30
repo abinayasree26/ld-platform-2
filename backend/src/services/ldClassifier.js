@@ -1,16 +1,11 @@
 /**
- * AI-powered LD Classifier using Claude API.
+ * AI-powered LD Classifier using local llama.cpp (Gemma).
  * Analyzes screening quiz answers to classify learning disability type.
- * Falls back to rule-based classifier if Claude is unavailable.
+ * Falls back to rule-based classifier if the AI is unavailable.
  */
 
-const Anthropic = require('@anthropic-ai/sdk');
+const llamaService = require('./llamaService');
 const { classifyLD: ruleBasedClassify } = require('./ruleBasedClassifier');
-
-const MODEL = 'claude-sonnet-4-6';
-const client = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
 
 const SYSTEM_PROMPT = `You are an educational psychologist AI specializing in learning disability screening for Indian children aged 5-12. You analyze quiz responses to identify potential learning disabilities.
 
@@ -44,14 +39,14 @@ RESPONSE FORMAT (return ONLY valid JSON):
  * @returns {Promise<Object>} Classification result
  */
 async function classifyLD(answers) {
-  // If no Claude API key, use rule-based immediately
-  if (!client) {
-    console.log('[ldClassifier] Claude unavailable — using rule-based classifier');
+  // If llama.cpp isn't running, use rule-based immediately
+  if (!(await llamaService.isAvailable())) {
+    console.log('[ldClassifier] llama.cpp unavailable — using rule-based classifier');
     return ruleBasedClassify(answers);
   }
 
   try {
-    // Prepare summary for Claude
+    // Prepare summary for the AI
     const summary = {
       totalQuestions: answers.length,
       totalCorrect: answers.filter(a => a.isCorrect).length,
@@ -85,14 +80,16 @@ async function classifyLD(answers) {
       };
     }
 
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 512,
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+    const text = await llamaService.chatCompletion({
       messages: [{ role: 'user', content: JSON.stringify(summary) }],
+      systemPrompt: SYSTEM_PROMPT,
+      maxTokens: 512,
+      temperature: 0.5,
     });
 
-    const result = JSON.parse(response.content[0].text.trim());
+    if (!text) throw new Error('llama.cpp returned no response');
+
+    const result = JSON.parse(text.trim());
 
     // Validate the response shape
     if (!result.ldType || typeof result.riskScore !== 'number' || !result.breakdown) {
@@ -108,7 +105,7 @@ async function classifyLD(answers) {
       classifiedBy: 'ai',
     };
   } catch (err) {
-    console.error('[ldClassifier] Claude classification failed:', err.message);
+    console.error('[ldClassifier] AI classification failed:', err.message);
     console.log('[ldClassifier] Falling back to rule-based classifier');
 
     const fallback = ruleBasedClassify(answers);

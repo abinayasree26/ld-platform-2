@@ -22,11 +22,18 @@ const demoSessions = {};
 // ─── Demo Auth Router ──────────────────────────────────────────────
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const validate = require('./validate');
+const {
+  loginSchema,
+  adminCredentialsSchema,
+  registerSchema,
+} = require('../validators/auth.validator');
 
 const demoAuth = express.Router();
 
-// Demo login — accepts any credentials, returns a valid JWT
-demoAuth.post('/login', (req, res) => {
+// Demo login — validates input and checks credentials
+demoAuth.post('/login', validate(loginSchema), (req, res) => {
   const { email, password } = req.body;
   const role = email?.includes('teacher') ? 'teacher'
     : email?.includes('parent') ? 'parent'
@@ -61,23 +68,38 @@ demoAuth.post('/demo', (req, res) => {
   res.json({ token, user });
 });
 
-demoAuth.post('/register', (req, res) => {
+demoAuth.post('/register', validate(registerSchema), (req, res) => {
   const { email, name, role } = req.body;
   const user = { id: uuid(), email: email || 'new@demo.in', name: name || 'New User', role: role || 'student' };
   const token = jwt.sign(user, env.jwt.secret, { expiresIn: '7d' });
   res.json({ token, user, message: 'Demo registration successful' });
 });
 
-// Admin credentials login (username/password) — demo accepts anything
-demoAuth.post('/credentials', (req, res) => {
-  const { username } = req.body;
+// Admin credentials login — strictly checks configured admin credentials
+demoAuth.post('/credentials', validate(adminCredentialsSchema), async (req, res) => {
+  const { username, password } = req.body;
+  if (username !== env.admin.username) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  let isMatch = false;
+  if (env.admin.passwordHash) {
+    isMatch = await bcrypt.compare(password, env.admin.passwordHash);
+  } else {
+    isMatch = (password === env.admin.password);
+  }
+
+  if (!isMatch) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
   const user = {
-    id: uuid(),
-    name: username || 'Admin',
-    role: 'admin',
+    id: 'admin',
+    name: 'Administrator',
+    role: 'super_admin',
     school_id: 'demo-school',
   };
-  const token = jwt.sign(user, env.jwt.secret, { expiresIn: '7d' });
+  const token = jwt.sign(user, env.jwt.secret, { expiresIn: '12h' });
   res.json({ token, user });
 });
 
@@ -800,6 +822,14 @@ demoAdmin.get('/billing', (req, res) => {
       { id: 'p6', student: 'Meera Iyer', email: 'meera.i@gmail.com', amount: 199, plan: 'Monthly', status: 'Success', date: '2026-07-18', method: 'UPI' },
       { id: 'p7', student: 'Karthik S.', email: 'karthik.s@gmail.com', amount: 199, plan: 'Monthly', status: 'Refunded', date: '2026-07-15', method: 'Card' },
       { id: 'p8', student: 'Nitin Rao', email: 'nitin.rao@gmail.com', amount: 1499, plan: 'Annual', status: 'Success', date: '2026-07-14', method: 'UPI' },
+      { id: 'p9', student: 'Deepak Gupta', email: 'deepak.g@gmail.com', amount: 0, plan: 'Free Tier', status: 'Success', date: '2026-07-12', method: 'Free' },
+      { id: 'p10', student: 'Ananya Das', email: 'ananya.d@gmail.com', amount: 0, plan: 'Free Tier', status: 'Success', date: '2026-07-10', method: 'Free' },
+      { id: 'p11', student: 'Divya Pillai', email: 'divya.p@gmail.com', amount: 0, plan: 'Free Tier', status: 'Success', date: '2026-07-08', method: 'Free' },
+      { id: 'p12', student: 'Lakshmi R.', email: 'lakshmi.r@gmail.com', amount: 0, plan: 'Free Tier', status: 'Success', date: '2026-07-05', method: 'Free' },
+      { id: 'p13', student: 'Kavya Nair', email: 'kavya.n@gmail.com', amount: 199, plan: 'Monthly', status: 'Success', date: '2026-07-04', method: 'UPI' },
+      { id: 'p14', student: 'Arjun Bhat', email: 'arjun.b@gmail.com', amount: 199, plan: 'Monthly', status: 'Success', date: '2026-07-02', method: 'Card' },
+      { id: 'p15', student: 'Ravi Kumar', email: 'ravi.k@gmail.com', amount: 1499, plan: 'Annual', status: 'Success', date: '2026-07-01', method: 'Net Banking' },
+      { id: 'p16', student: 'Pooja M.', email: 'pooja.m@gmail.com', amount: 199, plan: 'Monthly', status: 'Success', date: '2026-06-28', method: 'UPI' },
     ],
     revenueTrend: [
       { month: 'Jan', revenue: 2000, subscriptions: 4 },
@@ -939,7 +969,7 @@ demoAdmin.get('/settings', (req, res) => {
     },
     smtp: { host: 'smtp.gmail.com', port: 587, from: 'noreply@ldsupport.in', fromName: 'LD Support', username: '', password: '', enabled: true },
     privacy: { dataRetentionDays: 365, allowDataExport: true, allowAccountDeletion: true, consentRequired: true },
-    integrations: { razorpayKeyId: 'rzp_test_xxxxxxxxxxxx', razorpaySecret: '', firebaseProjectId: 'ld-support-app', firebaseKey: '', anthropicKey: '', aiModel: 'gemma' },
+    integrations: { razorpayKeyId: 'rzp_test_xxxxxxxxxxxx', razorpaySecret: '', firebaseProjectId: 'ld-support-app', firebaseKey: '', llamaBaseUrl: 'http://127.0.0.1:8081', aiModel: 'gemma' },
   });
 });
 
@@ -1067,6 +1097,57 @@ demoAdmin.patch('/screening-questions/:id', (req, res) => {
 
 demoAdmin.delete('/screening-questions/:id', (req, res) => {
   res.json({ success: true, message: 'Screening question deleted (demo)' });
+});
+
+demoAdmin.post('/settings/test-email', async (req, res) => {
+  const { smtpConfig = {}, targetEmail } = req.body;
+  const recipient = targetEmail || smtpConfig.username || 'admin@ldschools.in';
+  const { sendTestEmail } = require('../services/email.service');
+  try {
+    const result = await sendTestEmail(smtpConfig, recipient);
+    if (result.error) {
+      return res.status(400).json({ ok: false, error: result.error });
+    }
+    res.json({ ok: true, message: `Test email sent to ${recipient}`, result });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+demoAdmin.get('/export/:resource', (req, res) => {
+  const { resource } = req.params;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  let csvData = '';
+
+  if (resource === 'students') {
+    csvData = 'ID,Name,Email,Grade,LD Type,Severity,Status,Created At\n';
+    csvData += 'st-101,Aarav Sharma,aarav@gmail.com,Class 5,Dyslexia,Moderate,Active,2026-01-15\n';
+    csvData += 'st-102,Priya Menon,priya@gmail.com,Class 6,Dyscalculia,Mild,Active,2026-02-01\n';
+    csvData += 'st-103,Ravi Kumar,ravi@gmail.com,Class 4,Dysgraphia,Severe,Active,2026-03-28\n';
+  } else if (resource === 'payments') {
+    csvData = 'Order ID,Student,Email,Amount (INR),Plan,Status,Date\n';
+    csvData += 'ord_901,Aarav Sharma,aarav@gmail.com,1499,Annual,paid,2026-07-20\n';
+    csvData += 'ord_902,Priya Menon,priya@gmail.com,199,Monthly,paid,2026-07-22\n';
+  } else {
+    csvData = 'ID,Title,Category,Status,Date\n';
+    csvData += 'res-1,Screening Export,General,Completed,2026-07-28\n';
+  }
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename=${resource}_export_${dateStr}.csv`);
+  res.status(200).send(csvData);
+});
+
+demoAdmin.post('/students/import', (req, res) => {
+  const { rows = [] } = req.body;
+  const count = rows.length || 2;
+  res.json({ ok: true, importedCount: count, message: `Successfully imported ${count} student(s) from CSV!` });
+});
+
+demoAdmin.post('/cms/import', (req, res) => {
+  const { rows = [] } = req.body;
+  const count = rows.length || 5;
+  res.json({ ok: true, importedCount: count, message: `Successfully imported ${count} question(s) into CMS!` });
 });
 
 // ─── Screening Results ─────────────────────────────────────────

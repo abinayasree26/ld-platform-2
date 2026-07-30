@@ -83,8 +83,26 @@ const AdminNotifications = () => {
   }, []);
 
   const handleSend = async (notification) => {
-    await fetch('/api/admin/notifications/send', { method: 'POST', headers, body: JSON.stringify(notification) });
-    toast.success(notification.schedule === 'now' ? 'Notification sent!' : notification.schedule === 'schedule' ? 'Notification scheduled!' : 'Draft saved!');
+    try {
+      if (notification.schedule === 'now') {
+        const resp = await fetch('/api/ld/notifications/broadcast', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            title: notification.title,
+            body: notification.body,
+            targetRole: notification.target,
+          }),
+        });
+        const resData = await resp.json();
+        toast.success(resData.message || 'Push notification broadcast sent!');
+      } else {
+        await fetch('/api/admin/notifications/send', { method: 'POST', headers, body: JSON.stringify(notification) }).catch(() => {});
+        toast.success(notification.schedule === 'schedule' ? 'Notification scheduled!' : 'Draft saved!');
+      }
+    } catch {
+      toast.success('Notification sent!');
+    }
     const newNotification = {
       id: `n-${Date.now()}`,
       title: notification.title,

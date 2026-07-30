@@ -8,14 +8,15 @@ const { classifyLD } = require('../../services/ldClassifier');
 router.get('/questions', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await query(
-      `SELECT id, question_text, question_type, options AS options_json, correct_answer, category, media_url
-       FROM screening_questions WHERE is_active=TRUE ORDER BY order_index LIMIT 20`
+      `SELECT id, question_text, question_type, options, correct_answer, category, order_index
+       FROM screening_questions WHERE is_active=TRUE
+       ORDER BY order_index`
     );
-    res.json({ questions: rows });
+    res.json({ questions: rows, totalQuestions: rows.length, estimatedMinutes: 15 });
   } catch (err) { next(err); }
 });
 
-// Submit screening answers — uses AI classifier (Claude) with rule-based fallback
+// Submit screening answers — uses AI classifier (llama.cpp) with rule-based fallback
 router.post('/submit', requireAuth, async (req, res, next) => {
   try {
     const { answers, duration_seconds } = req.body;

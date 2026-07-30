@@ -1,9 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import useAuthStore from '../services/authStore';
 import useSidebarStore from '../services/sidebarStore';
-import LevelAvatar from './LevelAvatar';
-import { currentAvatarLevel } from '../pages/student/avatarSystem';
 
 const NAV_ITEMS = [
   { icon: '📊', label: 'My Dashboard', path: '/student' },
@@ -13,19 +10,12 @@ const NAV_ITEMS = [
   { icon: '⭐', label: 'Recommendations', path: '/student/recommendations' },
   { icon: '📈', label: 'Progress Analytics', path: '/student/analytics' },
   { icon: '🎓', label: 'Certification', path: '/student/certification' },
-  { icon: '👤', label: 'User Profile', path: '/student/profile' },
-  { icon: '💳', label: 'Payment', path: '/student/profile/payment' },
-  { icon: '🆘', label: 'Help & Support', path: '/student/help' },
 ];
 
 const StudentSidebar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user, logout } = useAuthStore();
   const { collapsed, close } = useSidebarStore();
-
-  const fullName = user?.name || 'Demo Student';
-  const avatarLevel = currentAvatarLevel(user);
 
   const goTo = (path) => {
     navigate(path);
@@ -67,19 +57,6 @@ const StudentSidebar = () => {
           );
         })}
       </nav>
-      <div style={{ padding: 16, borderTop: '1px solid #334155' }}>
-        <button
-          onClick={() => goTo('/student/profile')}
-          style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-        >
-          <LevelAvatar level={avatarLevel} size={36} showBadge={false} />
-          <div style={{ minWidth: 0 }}>
-            <p style={{ color: '#fff', fontSize: 13, fontWeight: 600, margin: 0 }}>{fullName}</p>
-            <p style={{ color: '#64748b', fontSize: 11, margin: 0 }}>Student</p>
-          </div>
-        </button>
-        <button onClick={logout} style={{ marginTop: 12, background: 'none', border: 'none', color: '#64748b', fontSize: 12, cursor: 'pointer', padding: 0 }}>↩ Logout</button>
-      </div>
       </aside>
     </>
   );

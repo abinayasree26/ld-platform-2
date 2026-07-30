@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { v4: uuid } = require('uuid');
 const { query } = require('../../config/database');
 const { requireAuth, requireRole } = require('../../middleware/auth');
+const llamaService = require('../../services/llamaService');
 
 const staff = [requireAuth, requireRole('teacher', 'school_admin')];
 
@@ -56,16 +57,14 @@ router.post('/notifications/mark-all-read', requireAuth, async (req, res, next) 
 // AI rephrase
 router.post('/ai/rephrase', ...staff, async (req, res, next) => {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'AI not configured' });
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client    = new Anthropic.default();
+    if (!(await llamaService.isAvailable())) return res.status(503).json({ error: 'AI not configured' });
     const { text, tone = 'professional' } = req.body;
-    const msg = await client.messages.create({
-      model:      'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      messages:   [{ role: 'user', content: `Rephrase the following school communication in a ${tone} tone:\n\n${text}` }],
+    const rephrased = await llamaService.chatCompletion({
+      messages: [{ role: 'user', content: `Rephrase the following school communication in a ${tone} tone:\n\n${text}` }],
+      maxTokens: 400,
     });
-    res.json({ rephrased: msg.content[0].text });
+    if (!rephrased) return res.status(503).json({ error: 'AI not configured' });
+    res.json({ rephrased });
   } catch (err) { next(err); }
 });
 

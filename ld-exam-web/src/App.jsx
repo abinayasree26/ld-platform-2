@@ -22,17 +22,21 @@ import AdminSettings from './pages/admin/AdminSettings';
 import StudentInvitePage from './pages/auth/StudentInvitePage';
 import ParentScorecard from './pages/parent/ParentScorecard';
 import MessagingPage from './pages/messages/MessagingPage';
-import StudentDashboardWeb from './pages/student/StudentDashboardWeb';
-import StudentTestSpace from './pages/student/StudentTestSpace';
-import StudentScreeningPage from './pages/student/StudentScreeningPage';
-import PracticePage from './pages/student/PracticePage';
-import RecommendationsPage from './pages/student/RecommendationsPage';
-import StudentAnalyticsPage from './pages/student/StudentAnalyticsPage';
-import UserProfilePage from './pages/student/UserProfilePage';
-import CertificationPage from './pages/student/CertificationPage';
-import HelpSupportPage from './pages/student/HelpSupportPage';
+import StudentDashboardWeb from './pages/student/dashboard/StudentDashboard';
+import StudentTestSpace from './pages/student/test/TestSpace';
+import StudentScreeningPage from './pages/student/screening/ScreeningPage';
+import PracticePage from './pages/student/practice/PracticePage';
+import RecommendationsPage from './pages/student/recommendations/RecommendationsPage';
+import StudentAnalyticsPage from './pages/student/analytics/AnalyticsPage';
+import UserProfilePage from './pages/student/profile/ProfilePage';
+import CertificationPage from './pages/student/certification/CertificationPage';
+import HelpSupportPage from './pages/student/help/HelpSupportPage';
 import SchoolSettingsPage from './pages/settings/SchoolSettingsPage';
 import InviteAcceptPage from './pages/onboarding/InviteAcceptPage';
+import { AccessibilityToolbar } from './components/accessibility';
+import './components/accessibility/accessibility.css';
+import { initFirebase, onForegroundMessage } from './services/firebase';
+import toast from 'react-hot-toast';
 
 // Extra profile fields shown for demo accounts (currently just the student profile module)
 const DEMO_PROFILE_EXTRAS = {
@@ -48,37 +52,51 @@ const DEMO_PROFILE_EXTRAS = {
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { token, user, setDemoAuth } = useAuthStore();
-  const role = allowedRoles?.[0] || 'teacher';
-  const wrongRole = allowedRoles && user?.role && !allowedRoles.includes(user.role);
+  const role = allowedRoles?.[0] || 'admin';
 
-  // No login screen for local/demo use — auto-provision (or switch to) a demo
-  // account for the module being opened, so every module is just a click away.
+  // Support super_admin and school_admin when 'admin' role is requested
+  const effectiveAllowed = allowedRoles?.flatMap((r) =>
+    r === 'admin' ? ['admin', 'super_admin', 'school_admin'] : r
+  );
+  const wrongRole = effectiveAllowed && user?.role && !effectiveAllowed.includes(user.role);
+
   useEffect(() => {
     if (!token || wrongRole) {
       const fallbackUser = {
-        id: `demo-${role}`,
-        name: `Demo ${role.charAt(0).toUpperCase()}${role.slice(1)}`,
-        role,
+        id: 'demo-admin',
+        name: 'Demo Admin',
+        role: 'super_admin',
         school_id: 'demo-school',
-        ...DEMO_PROFILE_EXTRAS[role],
+        email: 'admin@ldschools.in',
       };
-      // Get a real JWT from the backend so authenticated API calls actually succeed
-      // instead of 401ing; fall back to a local-only identity if it's unreachable.
-      authAPI.demo(role)
+      setDemoAuth(fallbackUser, 'demo-token');
+      authAPI.demo('admin')
         .then((result) => setDemoAuth({ ...fallbackUser, ...result.user }, result.token))
-        .catch(() => setDemoAuth(fallbackUser, 'demo-token'));
+        .catch(() => {});
     }
-  }, [token, wrongRole, role]);
+  }, [token, wrongRole]);
 
-  if (!token || wrongRole) return null;
-  // Redirect teachers with no school to onboarding (except if already there)
-  if (allowedRoles?.includes('teacher') && user?.role === 'teacher' && !user?.school_id) {
-    return <Navigate to="/onboarding" replace />;
-  }
   return children;
 };
 
-const App = () => (
+const App = () => {
+  // Initialize Firebase and listen for foreground push notifications
+  useEffect(() => {
+    initFirebase();
+    onForegroundMessage((payload) => {
+      const title = payload.notification?.title || 'LD Schools';
+      const body = payload.notification?.body || '';
+      toast(
+        `🔔 ${title}\n${body}`,
+        { duration: 5000, icon: '🔔' }
+      );
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/icons/ld-icon-192.png' });
+      }
+    });
+  }, []);
+
+  return (
   <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <Toaster
       position="top-right"
@@ -87,7 +105,9 @@ const App = () => (
         style: { borderRadius: '12px', fontWeight: 600 },
       }}
     />
+    <AccessibilityToolbar />
     <Routes>
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invite/:token" element={<InviteAcceptPage />} />
       <Route path="/student-invite/:token" element={<StudentInvitePage />} />
@@ -319,9 +339,10 @@ const App = () => (
         }
       />
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   </BrowserRouter>
-);
+  );
+};
 
 export default App;

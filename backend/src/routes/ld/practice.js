@@ -37,6 +37,23 @@ router.get('/start', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /quick-submit — Save a quick practice session (from the hardcoded category quiz)
+router.post('/quick-submit', requireAuth, async (req, res, next) => {
+  try {
+    const { category, exercises_total, exercises_correct } = req.body;
+    if (!category || !exercises_total) {
+      return res.status(400).json({ error: 'category and exercises_total required' });
+    }
+    const id = uuid();
+    await query(
+      `INSERT INTO practice_sessions (id, user_id, session_type, status, exercises_total, exercises_correct, completed_at)
+       VALUES ($1, $2, $3, 'completed', $4, $5, NOW())`,
+      [id, req.user.id, category, exercises_total || 0, exercises_correct || 0]
+    );
+    res.json({ success: true, session_id: id });
+  } catch (err) { next(err); }
+});
+
 // GET /next-exercise — Get next adaptive exercise in active session
 router.get('/next-exercise', requireAuth, async (req, res, next) => {
   try {

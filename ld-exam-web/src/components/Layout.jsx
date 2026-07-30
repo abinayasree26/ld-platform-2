@@ -18,7 +18,6 @@ const NAV_ADMIN = [
   { label: 'Billing', path: '/admin/billing', icon: '💳' },
   { label: 'Support', path: '/admin/chats', icon: '💬' },
   { label: 'Notifications', path: '/admin/notifications', icon: '🔔' },
-  { label: 'Settings', path: '/admin/settings', icon: '⚙️' },
 ];
 
 const FONT_OPTIONS = [
@@ -30,10 +29,13 @@ const FONT_OPTIONS = [
 const Layout = ({ children }) => {
   const { user, logout } = useAuthStore();
   const { isDark, toggleTheme, initTheme } = useThemeStore();
-  const location = useLocation();
-  const nav = user?.role === 'admin' ? NAV_ADMIN : NAV_TEACHER;
+  const isAdmin = ['admin', 'super_admin', 'school_admin'].includes(user?.role);
+  const nav = isAdmin ? NAV_ADMIN : NAV_TEACHER;
   const [fontIdx, setFontIdx] = useState(1);
   const [fontDropdown, setFontDropdown] = useState(false);
+  const [profileDropdown, setProfileDropdown] = useState(false);
+  const [settingsSubmenu, setSettingsSubmenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => { initTheme(); }, []);
@@ -41,13 +43,16 @@ const Layout = ({ children }) => {
   // Close sidebar on route change (mobile)
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
-  // Close font dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
-    if (!fontDropdown) return;
-    const close = () => setFontDropdown(false);
+    const close = () => {
+      setFontDropdown(false);
+      setProfileDropdown(false);
+      setSettingsSubmenu(false);
+    };
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
-  }, [fontDropdown]);
+  }, []);
 
   return (
     <div className="h-screen flex bg-[var(--bg-main)] transition-colors duration-300 overflow-hidden">
@@ -71,7 +76,7 @@ const Layout = ({ children }) => {
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white text-xl">✕</button>
           </div>
           <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest px-1 mt-1">
-            {user?.role === 'admin' ? 'Admin Portal' : 'Teacher Portal'}
+            {isAdmin ? 'Admin Portal' : 'Student Portal'}
           </p>
         </div>
 
@@ -112,7 +117,7 @@ const Layout = ({ children }) => {
             {/* Font Size Dropdown */}
             <div className="relative">
               <button
-                onClick={(e) => { e.stopPropagation(); setFontDropdown(!fontDropdown); }}
+                onClick={(e) => { e.stopPropagation(); setFontDropdown(!fontDropdown); setProfileDropdown(false); }}
                 className="flex items-center gap-1 text-slate-400 hover:text-white text-sm font-bold transition-colors"
               >
                 Aa <span className="text-[10px] bg-slate-700 px-1.5 py-0.5 rounded ml-1 text-slate-300">{FONT_OPTIONS[fontIdx].key}</span>
@@ -140,18 +145,87 @@ const Layout = ({ children }) => {
               {isDark ? '🌙' : '☀️'}
             </button>
 
-            {/* User Badge — hide text on small screens */}
-            <div className="flex items-center gap-2 bg-slate-800 px-2 sm:px-4 py-1.5 rounded-full">
-              <span className="text-white text-sm font-bold hidden sm:inline">Demo admin</span>
-              <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
-                {user?.role || 'ADMIN'}
-              </span>
-            </div>
+            {/* User Profile & Settings Dropdown */}
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setProfileDropdown(!profileDropdown); setFontDropdown(false); }}
+                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-md"
+              >
+                <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                  {(user?.name || 'Admin')[0].toUpperCase()}
+                </div>
+                <span className="text-white text-xs font-bold hidden sm:inline">{user?.name || 'Demo admin'}</span>
+                <span className="bg-blue-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                  {user?.role || 'SUPER_ADMIN'}
+                </span>
+                <span className="text-slate-400 text-xs ml-0.5">▾</span>
+              </button>
 
-            {/* Sign Out */}
-            <button onClick={logout} className="text-blue-400 hover:text-red-400 text-xs sm:text-sm font-bold transition-colors">
-              Sign out
-            </button>
+              {profileDropdown && (
+                <div
+                  className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* User Profile Card Header */}
+                  <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-800/80">
+                    <p className="text-xs font-bold text-white tracking-tight">{user?.name || 'Demo admin'}</p>
+                    <p className="text-[11px] text-slate-400 font-mono mt-0.5">{user?.email || 'admin@ldschools.in'}</p>
+                    <div className="mt-2 inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      <span>🛡️</span> {user?.role === 'super_admin' ? 'Super Admin (Full Access)' : 'School Administrator'}
+                    </div>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="py-1 space-y-0.5">
+                    <button
+                      onClick={() => { setShowProfileModal(true); setProfileDropdown(false); setSettingsSubmenu(false); }}
+                      className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-700/80 hover:text-white flex items-center gap-2.5 transition-colors"
+                    >
+                      <span>👤</span> Admin Profile Details
+                    </button>
+
+                    {/* Collapsible Platform Settings */}
+                    <div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSettingsSubmenu(!settingsSubmenu);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-700/80 hover:text-white flex items-center justify-between transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span>⚙️</span> Platform Settings
+                        </span>
+                        <span className={`text-[10px] text-slate-400 transition-transform ${settingsSubmenu ? 'rotate-90 text-purple-400' : ''}`}>▶</span>
+                      </button>
+
+                      {settingsSubmenu && (
+                        <div className="bg-slate-900/80 py-1.5 px-3 space-y-1 my-1 border-y border-slate-700/40">
+                          <Link to="/admin/settings#account" onClick={() => { setProfileDropdown(false); setSettingsSubmenu(false); }} className="block text-xs font-semibold text-slate-300 hover:text-purple-400 py-1 px-2 rounded hover:bg-slate-800 transition">🔐 Account & Security</Link>
+                          <Link to="/admin/settings#platform" onClick={() => { setProfileDropdown(false); setSettingsSubmenu(false); }} className="block text-xs font-semibold text-slate-300 hover:text-purple-400 py-1 px-2 rounded hover:bg-slate-800 transition">🎨 Platform Setup</Link>
+                          <Link to="/admin/settings#learning" onClick={() => { setProfileDropdown(false); setSettingsSubmenu(false); }} className="block text-xs font-semibold text-slate-300 hover:text-purple-400 py-1 px-2 rounded hover:bg-slate-800 transition">🧠 Learning & Subscriptions</Link>
+                          <Link to="/admin/settings#integrations" onClick={() => { setProfileDropdown(false); setSettingsSubmenu(false); }} className="block text-xs font-semibold text-slate-300 hover:text-purple-400 py-1 px-2 rounded hover:bg-slate-800 transition">⚡ Integrations & Privacy</Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Logout Button */}
+                  <div className="pt-1 mt-1 border-t border-slate-700/60">
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to sign out?')) {
+                          logout();
+                        }
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors"
+                    >
+                      <span>🚪</span> Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -160,6 +234,48 @@ const Layout = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Admin Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowProfileModal(false)}>
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold">👤 Admin Profile Details</h3>
+              <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-white text-lg">✕</button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-1.5 border-b border-slate-800/60">
+                <span className="text-slate-400 font-bold uppercase">Name</span>
+                <span className="font-bold text-white">{user?.name || 'Demo admin'}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800/60">
+                <span className="text-slate-400 font-bold uppercase">Email</span>
+                <span className="font-mono text-purple-400">{user?.email || 'admin@ldschools.in'}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800/60">
+                <span className="text-slate-400 font-bold uppercase">Role</span>
+                <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">{user?.role || 'SUPER_ADMIN'}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-slate-800/60">
+                <span className="text-slate-400 font-bold uppercase">Access Scope</span>
+                <span className="text-emerald-400 font-bold">Full System Access</span>
+              </div>
+            </div>
+            <div className="pt-3 flex justify-between items-center border-t border-slate-800">
+              <Link
+                to="/admin/settings"
+                onClick={() => setShowProfileModal(false)}
+                className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600 hover:text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5"
+              >
+                <span>✏️</span> Edit Profile & Credentials
+              </Link>
+              <button onClick={() => setShowProfileModal(false)} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
