@@ -590,29 +590,6 @@ const AdminStudents = () => {
             </div>
           )}
         </div>
-
-        {/* Export button */}
-        <div className="flex justify-end">
-          <button
-            onClick={() => {
-              const headers = 'Name,Email,LD Type,Severity,Level,Subscription,Last Active,Joined\n';
-              const rows = students.map(s =>
-                `${s.name},${s.email},${s.ldType},${s.severity || 'N/A'},${s.level},${s.subscription},${s.lastActive},${s.joined}`
-              ).join('\n');
-              const blob = new Blob([headers + rows], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `students_export_${new Date().toISOString().slice(0, 10)}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
-              toast.success('CSV downloaded!');
-            }}
-            className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl text-xs font-bold text-[var(--text-muted)] hover:border-purple-400 hover:text-purple-600 transition"
-          >
-            📥 Export as CSV
-          </button>
-        </div>
       </div>
 
       {/* Student Detail Modal */}

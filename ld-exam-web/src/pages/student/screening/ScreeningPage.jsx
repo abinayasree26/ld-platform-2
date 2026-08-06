@@ -145,14 +145,17 @@ const StudentScreeningPage = () => {
   const submitScreening = async (finalAnswers) => {
     setPhase('submitting');
     const durationSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
+    let finalResultData = null;
     try {
       const data = await ldAPI.screeningSubmit(finalAnswers, Math.max(60, durationSeconds));
+      finalResultData = data;
       setResult(data);
       recordScreening({ riskScore: data.riskScore, ldType: data.ldType, breakdown: data.breakdown });
       setPhase('result');
     } catch {
       // No backend available in this demo environment — score it locally instead.
       const localResult = computeDemoResult(finalAnswers);
+      finalResultData = localResult;
       setResult(localResult);
       recordScreening({
         riskScore: localResult.riskScore,
@@ -161,6 +164,23 @@ const StudentScreeningPage = () => {
       });
       setPhase('result');
     }
+
+    try {
+      const newSubmission = {
+        id: `sr-${Date.now()}`,
+        studentId: user?.id || 'st-demo',
+        studentName: user?.name || 'Demo Student',
+        studentEmail: user?.email || 'student@gmail.com',
+        ldType: finalResultData?.ldType || 'dyslexia',
+        severity: finalResultData?.severity || 'Moderate',
+        riskScore: finalResultData?.riskScore || 45,
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        breakdown: finalResultData?.breakdown || { dyslexia: 55, dysgraphia: 40, dyscalculia: 30 },
+      };
+      const stored = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+      localStorage.setItem('admin_custom_screening_results', JSON.stringify([newSubmission, ...stored]));
+    } catch { /* ignore */ }
   };
 
   const q = questions[current];

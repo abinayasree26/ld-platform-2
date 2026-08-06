@@ -95,7 +95,16 @@ const AdminScreening = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await resp.json();
-      setResults(data.results || []);
+      let list = data.results || [];
+      try {
+        const customSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        if (customSubmissions.length > 0) {
+          const existingIds = new Set(list.map(r => r.id));
+          const newCustom = customSubmissions.filter(s => !existingIds.has(s.id));
+          list = [...newCustom, ...list];
+        }
+      } catch { /* ignore */ }
+      setResults(list);
       setStats(data.stats || null);
     } catch {
       toast.error('Failed to load screening data');

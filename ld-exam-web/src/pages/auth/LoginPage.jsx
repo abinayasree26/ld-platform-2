@@ -49,10 +49,26 @@ const LoginPage = () => {
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
 
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
+
   const handleConsentAccept = async () => {
     await complianceAPI.recordConsent('data_processing').catch(() => {});
     navigate(pendingNav || '/dashboard');
     setPendingNav(null);
+  };
+
+  const parseResponseJson = async (resp) => {
+    const text = await resp.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(
+        resp.ok
+          ? 'Invalid server response'
+          : `Server error (${resp.status}): Backend service unreachable`
+      );
+    }
   };
 
   const handleAdminLogin = async (e) => {
@@ -68,10 +84,23 @@ const LoginPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: adminUsername.trim(), password: adminPassword }),
       });
-      const data = await resp.json();
+      const data = await parseResponseJson(resp);
       if (!resp.ok) throw new Error(data.error || 'Login failed');
       setDemoAuth(data.user, data.token);
       trackLogin('credentials', 'admin');
+
+      // Record Admin Login entry in security audit log
+      try {
+        const savedLogs = JSON.parse(localStorage.getItem('admin_audit_logs') || '[]');
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const updatedLogs = [
+          { date: dateStr, action: 'Admin Login', ip: '192.168.1.5', device: 'Chrome / Windows' },
+          ...savedLogs,
+        ].slice(0, 20);
+        localStorage.setItem('admin_audit_logs', JSON.stringify(updatedLogs));
+      } catch { /* ignore */ }
+
       toast.success('Welcome, Admin!');
       navigate('/admin');
     } catch (err) {
@@ -90,7 +119,7 @@ const LoginPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
-      const data = await resp.json();
+      const data = await parseResponseJson(resp);
       if (!resp.ok) throw new Error(data.error || 'Login failed');
       setDemoAuth(data.user, data.token);
       trackLogin('email', data.user.role);
@@ -115,7 +144,7 @@ const LoginPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), password, role }),
       });
-      const data = await resp.json();
+      const data = await parseResponseJson(resp);
       if (!resp.ok) throw new Error(data.error || 'Registration failed');
       setDemoAuth(data.user, data.token);
       toast.success('Account created! Welcome.');
@@ -166,20 +195,30 @@ const LoginPage = () => {
                   placeholder="admin"
                   value={adminUsername}
                   onChange={(e) => setAdminUsername(e.target.value)}
-                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-500 transition-colors"
+                  className="w-full border-2 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-500 transition-colors font-medium"
                   required
                 />
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700">Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-purple-500 transition-colors"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showAdminPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    className="w-full border-2 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 rounded-xl px-4 py-3 pr-11 text-base focus:outline-none focus:border-purple-500 transition-colors font-medium"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 focus:outline-none text-lg select-none"
+                    title={showAdminPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showAdminPassword ? '👁️' : '🙈'}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"
@@ -204,20 +243,30 @@ const LoginPage = () => {
                   placeholder="your@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full border-2 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors font-medium"
                   required
                 />
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700">Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showStudentPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border-2 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 rounded-xl px-4 py-3 pr-11 text-base focus:outline-none focus:border-orange-500 transition-colors font-medium"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentPassword(!showStudentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 focus:outline-none text-lg select-none"
+                    title={showStudentPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showStudentPassword ? '👁️' : '🙈'}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"

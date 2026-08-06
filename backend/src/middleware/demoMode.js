@@ -957,24 +957,40 @@ demoAdmin.patch('/notifications/triggers/:id', (req, res) => {
 });
 
 // ─── Settings ───────────────────────────────────────────────────────
+let currentDemoSettings = {
+  platform: { name: 'LD Support', tagline: 'Learn your way', logo: null },
+  admin: { username: 'admin', email: 'admin@ldschools.in', twoFactor: false },
+  app: { demoMode: true, maintenanceMode: false, registration: 'open', trialDays: 7 },
+  screening: { questionsPerLevel: 6, levels: 5, passThreshold: 70, timeLimit: 20 },
+  subscription: {
+    monthlyPrice: 199, annualPrice: 1499, trialDays: 7,
+    gracePeriod: 3, autoRenewalReminder: true,
+  },
+  smtp: { host: 'smtp.gmail.com', port: 587, from: 'noreply@ldsupport.in', fromName: 'LD Support', username: 'jaisree1126@gmail.com', password: '', enabled: true },
+  privacy: { dataRetentionDays: 365, allowDataExport: true, allowAccountDeletion: true, consentRequired: true },
+  integrations: { razorpayKeyId: 'rzp_test_xxxxxxxxxxxx', razorpaySecret: '', firebaseProjectId: 'ld-support-app', firebaseKey: '', llamaBaseUrl: 'http://127.0.0.1:8081', aiModel: 'gemma' },
+};
+
 demoAdmin.get('/settings', (req, res) => {
-  res.json({
-    platform: { name: 'LD Support', tagline: 'Learn your way', logo: null },
-    admin: { username: 'admin', email: 'admin@ldsupport.in', twoFactor: false },
-    app: { demoMode: true, maintenanceMode: false, registration: 'open', trialDays: 7 },
-    screening: { questionsPerLevel: 6, levels: 5, passThreshold: 70, timeLimit: 20 },
-    subscription: {
-      monthlyPrice: 199, annualPrice: 1499, trialDays: 7,
-      gracePeriod: 3, autoRenewalReminder: true,
-    },
-    smtp: { host: 'smtp.gmail.com', port: 587, from: 'noreply@ldsupport.in', fromName: 'LD Support', username: '', password: '', enabled: true },
-    privacy: { dataRetentionDays: 365, allowDataExport: true, allowAccountDeletion: true, consentRequired: true },
-    integrations: { razorpayKeyId: 'rzp_test_xxxxxxxxxxxx', razorpaySecret: '', firebaseProjectId: 'ld-support-app', firebaseKey: '', llamaBaseUrl: 'http://127.0.0.1:8081', aiModel: 'gemma' },
-  });
+  res.json(currentDemoSettings);
 });
 
 demoAdmin.patch('/settings', (req, res) => {
-  res.json({ success: true, message: 'Settings updated (demo)' });
+  if (req.body && typeof req.body === 'object') {
+    currentDemoSettings = {
+      ...currentDemoSettings,
+      ...req.body,
+      smtp: { ...currentDemoSettings.smtp, ...(req.body.smtp || {}) },
+      admin: { ...currentDemoSettings.admin, ...(req.body.admin || {}) },
+      platform: { ...currentDemoSettings.platform, ...(req.body.platform || {}) },
+      app: { ...currentDemoSettings.app, ...(req.body.app || {}) },
+      screening: { ...currentDemoSettings.screening, ...(req.body.screening || {}) },
+      subscription: { ...currentDemoSettings.subscription, ...(req.body.subscription || {}) },
+      privacy: { ...currentDemoSettings.privacy, ...(req.body.privacy || {}) },
+      integrations: { ...currentDemoSettings.integrations, ...(req.body.integrations || {}) },
+    };
+  }
+  res.json({ success: true, settings: currentDemoSettings, message: 'Settings updated successfully' });
 });
 
 // ─── Content CMS ────────────────────────────────────────────────────

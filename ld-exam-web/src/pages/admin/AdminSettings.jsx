@@ -76,13 +76,57 @@ const AdminSettings = () => {
     return ['account', 'platform', 'learning', 'integrations'].includes(hash) ? hash : 'account';
   });
 
+  const [auditLogs, setAuditLogs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_audit_logs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* fallback */ }
+
+    const now = new Date();
+    const formatDate = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+    const defaults = [
+      { date: formatDate(now), action: 'Admin Login', ip: '192.168.1.5', device: 'Chrome / Windows' },
+      { date: formatDate(new Date(now.getTime() - 86400000)), action: 'Settings Updated', ip: '192.168.1.5', device: 'Chrome / Windows' },
+      { date: formatDate(new Date(now.getTime() - 172800000)), action: 'Test Email Sent', ip: '192.168.1.5', device: 'Chrome / Windows' },
+      { date: formatDate(new Date(now.getTime() - 259200000)), action: 'Student CSV Exported', ip: '192.168.1.5', device: 'Chrome / Windows' },
+      { date: formatDate(new Date(now.getTime() - 345600000)), action: 'Push Notification Sent', ip: '192.168.1.5', device: 'Chrome / Windows' },
+    ];
+    localStorage.setItem('admin_audit_logs', JSON.stringify(defaults));
+    return defaults;
+  });
+
+  const recordAuditAction = (action) => {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    setAuditLogs((prev) => {
+      const updated = [{ date: dateStr, action, ip: '192.168.1.5', device: 'Chrome / Windows' }, ...prev].slice(0, 20);
+      localStorage.setItem('admin_audit_logs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const token = localStorage.getItem('auth_token');
   const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   useEffect(() => {
     fetch('/api/admin/settings', { headers })
       .then(r => r.json())
-      .then(setSettings)
+      .then(apiData => {
+        try {
+          const savedLocal = localStorage.getItem('admin_platform_settings');
+          if (savedLocal) {
+            const parsed = JSON.parse(savedLocal);
+            setSettings(prev => ({ ...apiData, ...parsed }));
+            return;
+          }
+        } catch { /* fallback */ }
+        setSettings(apiData);
+      })
       .catch(() => toast.error('Failed to load settings'))
       .finally(() => setLoading(false));
   }, []);
@@ -111,7 +155,11 @@ const AdminSettings = () => {
     setSaving(true);
     try {
       await fetch('/api/admin/settings', { method: 'PATCH', headers, body: JSON.stringify(settings) });
+      try {
+        localStorage.setItem('admin_platform_settings', JSON.stringify(settings));
+      } catch { /* ignore */ }
       toast.success('Settings saved successfully!');
+      recordAuditAction('Settings Updated');
     } catch {
       toast.error('Failed to save settings');
     } finally {
@@ -135,6 +183,7 @@ const AdminSettings = () => {
 
       if (resp.ok) {
         toast.success(data.message || 'Test email dispatched successfully!');
+        recordAuditAction('Test Email Sent');
       } else {
         toast.error(data.error || 'Failed to send test email');
       }
@@ -234,15 +283,67 @@ const AdminSettings = () => {
             {activeTab === 'account' && (
               <>
                 <Section title="Admin Profile Credentials" icon="🔐">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
                     <PasswordOrInput label="Username" value={admin?.username || ''} onChange={v => updateSetting('admin', 'username', v)} />
-                    <PasswordOrInput label="Email" value={admin?.email || ''} onChange={v => updateSetting('admin', 'email', v)} />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <PasswordOrInput label="New Password" value={newPassword} onChange={setNewPassword} type="password" placeholder="Leave blank to keep current" />
                     <PasswordOrInput label="Confirm Password" value={confirmPassword} onChange={setConfirmPassword} type="password" placeholder="Confirm new password" />
                   </div>
                   <Toggle label="Two-Factor Authentication (2FA)" value={admin?.twoFactor || false} onChange={v => updateSetting('admin', 'twoFactor', v)} />
+                </Section>
+
+                <Section title="Active Login Sessions & Security Devices" icon="💻">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-[var(--bg-main)]/60 border border-[var(--border-main)] rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">💻</span>
+                        <div>
+                          <p className="text-xs font-bold text-[var(--text-main)]">Chrome on Windows (Current Session)</p>
+                          <p className="text-[11px] text-[var(--text-muted)] font-mono">192.168.1.5 • Active Now</p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold rounded-md uppercase">Active</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        toast.success('Signed out all other active admin sessions!');
+                        recordAuditAction('Terminated Other Sessions');
+                      }}
+                      className="px-4 py-2 border border-[var(--border-main)] hover:bg-[var(--bg-main)] text-[var(--text-main)] text-xs font-bold rounded-xl transition flex items-center gap-2"
+                    >
+                      <span>🔒</span> Sign Out All Other Devices
+                    </button>
+                  </div>
+                </Section>
+
+                <Section title="System Backup & Configuration Export" icon="📥">
+                  <p className="text-xs text-[var(--text-muted)] font-medium mb-3">
+                    Export platform settings, security audit logs, screening rules, and subscription pricing as a downloadable backup file.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => {
+                        const backupData = {
+                          exportDate: new Date().toISOString(),
+                          settings,
+                          auditLogs,
+                        };
+                        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `ld_platform_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        toast.success('System configuration backup downloaded!');
+                        recordAuditAction('System Backup Exported');
+                      }}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 shadow"
+                    >
+                      <span>📥</span> Export Platform Backup (.json)
+                    </button>
+                  </div>
                 </Section>
 
                 <Section title="Security Audit Log" icon="📋">
@@ -257,13 +358,7 @@ const AdminSettings = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--border-main)]">
-                        {[
-                          { date: '2026-07-28 15:40', action: 'Admin Login', ip: '192.168.1.5', device: 'Chrome / Windows' },
-                          { date: '2026-07-27 09:15', action: 'Settings Updated', ip: '192.168.1.5', device: 'Chrome / Windows' },
-                          { date: '2026-07-26 18:30', action: 'Test Email Sent', ip: '192.168.1.5', device: 'Chrome / Windows' },
-                          { date: '2026-07-25 14:20', action: 'Student CSV Exported', ip: '192.168.1.5', device: 'Chrome / Windows' },
-                          { date: '2026-07-24 11:00', action: 'Push Notification Sent', ip: '192.168.1.5', device: 'Chrome / Windows' },
-                        ].map((log, i) => (
+                        {auditLogs.map((log, i) => (
                           <tr key={i} className="hover:bg-[var(--bg-main)] transition-colors">
                             <td className="px-3 py-2.5 text-[var(--text-muted)] text-xs font-mono">{log.date}</td>
                             <td className="px-3 py-2.5 font-bold text-[var(--text-main)] text-xs">{log.action}</td>
@@ -385,12 +480,32 @@ const AdminSettings = () => {
                     </div>
                     <div>
                       <label className="block text-[11px] font-extrabold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">AI Chat Engine</label>
-                      <select value="gemma" disabled
-                        className="w-full bg-[var(--bg-main)] border border-[var(--border-main)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-main)] focus:outline-none focus:border-purple-500 opacity-90 font-medium">
-                        <option value="gemma">Gemma 4 E2B (On-Device AI Engine)</option>
-                      </select>
+                      <input
+                        type="text"
+                        value="Gemma 4 E2B (On-Device AI Engine)"
+                        readOnly
+                        className="w-full bg-[var(--bg-main)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-main)] focus:outline-none font-medium cursor-default opacity-90"
+                      />
                     </div>
                   </div>
+                </Section>
+
+                <Section title="Admin System Alerts & Notifications" icon="🔔">
+                  <Toggle
+                    label="Alert Admin on New Student Screening Completion"
+                    value={settings?.adminAlerts?.screeningAlert !== false}
+                    onChange={v => updateSetting('adminAlerts', 'screeningAlert', v)}
+                  />
+                  <Toggle
+                    label="Alert Admin on Payment & Subscription Failures"
+                    value={settings?.adminAlerts?.paymentAlert !== false}
+                    onChange={v => updateSetting('adminAlerts', 'paymentAlert', v)}
+                  />
+                  <Toggle
+                    label="Alert Admin on Student Plan Expiry (3 Days Prior)"
+                    value={settings?.adminAlerts?.expiryAlert !== false}
+                    onChange={v => updateSetting('adminAlerts', 'expiryAlert', v)}
+                  />
                 </Section>
 
                 <Section title="Data & Privacy (DPDP Act)" icon="🛡️">

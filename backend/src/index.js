@@ -177,7 +177,11 @@ if (env.demoMode) {
       console.log('[App] Migrations done.');
     } catch (err) {
       console.error('[App] Migration failed:', err.message);
-      process.exit(1);
+      if (process.env.NODE_ENV === 'production') {
+        process.exit(1);
+      } else {
+        console.warn('  ⚠️  [App] DB server unreachable — server will continue running (fallback mode active)');
+      }
     }
   }
   runStartupMigrations();
