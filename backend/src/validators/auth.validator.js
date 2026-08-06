@@ -15,6 +15,9 @@ const registerSchema = z.object({
   email: z.string().trim().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters long'),
   phone: z.string().optional().nullable(),
+  role: z.enum(['student', 'teacher', 'parent']).optional(),
+  class_grade: z.number().int().min(1).max(12).optional().nullable(),
+  age: z.number().int().min(5).max(18).optional().nullable(),
 });
 
 const otpRequestSchema = z.object({

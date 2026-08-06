@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { authAPI } from './api';
 import { identifyUser, resetAnalytics } from './analytics';
 
+// Clear per-session local progress so a newly logged-in / registered user never
+// sees the previous user's cached dashboard data. (The dashboard reads real data
+// from the DB; this just prevents stale localStorage from leaking across users.)
+function clearLocalProgress() {
+  try { localStorage.removeItem('ld_local_progress'); } catch {}
+}
+
 const useAuthStore = create((set) => ({
   token: localStorage.getItem('auth_token') || null,
   user: JSON.parse(localStorage.getItem('user_data') || 'null'),
@@ -11,6 +18,7 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('auth_token', result.token);
     if (result.refreshToken) localStorage.setItem('refresh_token', result.refreshToken);
     localStorage.setItem('user_data', JSON.stringify(result.user));
+    clearLocalProgress();
     set({ token: result.token, user: result.user });
     identifyUser(result.user);
     // Return full result so callers can read isNewUser
@@ -22,6 +30,7 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('auth_token', result.token);
     localStorage.removeItem('refresh_token'); // demo sessions don't use refresh
     localStorage.setItem('user_data', JSON.stringify(result.user));
+    clearLocalProgress();
     set({ token: result.token, user: result.user });
     identifyUser(result.user);
     return result.user;
@@ -31,6 +40,7 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('auth_token', token);
     localStorage.removeItem('refresh_token');
     localStorage.setItem('user_data', JSON.stringify(user));
+    clearLocalProgress();
     set({ token, user });
     identifyUser(user);
   },
@@ -40,6 +50,7 @@ const useAuthStore = create((set) => ({
     localStorage.removeItem('auth_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_data');
+    clearLocalProgress();
     resetAnalytics();
     set({ token: null, user: null });
     window.location.href = '/login';

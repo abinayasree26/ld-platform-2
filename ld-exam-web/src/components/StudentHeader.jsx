@@ -49,7 +49,7 @@ const StudentHeader = ({ showBell = false }) => {
   };
 
   return (
-    <header style={{ flexShrink: 0, background: mode === 'dark' ? '#1e293b' : '#fff', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`, padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
+    <header className="sp-header" style={{ flexShrink: 0, background: mode === 'dark' ? '#1e293b' : '#fff', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`, padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
       <button
         onClick={toggle}
         title="Toggle sidebar"
@@ -123,7 +123,7 @@ const StudentHeader = ({ showBell = false }) => {
           >
             <div onClick={() => navigate('/student/profile')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
               <LevelAvatar level={avatarLevel} size={34} showBadge={false} />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+              <div className="sp-hide-xs" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
                 <span style={{ fontWeight: 600, color: mode === 'dark' ? '#f1f5f9' : '#334155', fontSize: 13 }}>{firstName}</span>
                 <span style={{ color: '#94a3b8', fontSize: 10, fontWeight: 600 }}>Student</span>
               </div>

@@ -121,7 +121,8 @@ const RecommendationsPage = () => {
     // Also try analytics API for category mastery (most reliable source)
     const studentId = user?.id;
     if (studentId) {
-      analyticsAPI.student(studentId)
+      // Use the current-student endpoint (by-id path 404s in real mode)
+      analyticsAPI.me()
         .then(data => {
           if (data?.categoryMastery?.length && weakCategories.length === 0) {
             const sorted = data.categoryMastery

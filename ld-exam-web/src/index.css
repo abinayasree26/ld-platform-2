@@ -121,6 +121,41 @@ body {
   /* Side-by-side flex rows (subscription plan cards, payment method picker)
      stack into a single column on a narrow screen */
   .sp-flex-stack { flex-direction: column !important; }
+
+  /* ── Mobile scroll fix ──
+     Student pages use a fixed-height desktop shell (height:100vh + overflow:hidden)
+     which clips content and blocks scrolling on phones. On mobile we let the whole
+     page grow to its natural height and scroll normally. */
+  .sp-page { height: auto !important; min-height: 100vh; overflow: visible !important; }
+  .sp-main { height: auto !important; min-height: 100vh; overflow: visible !important; }
+  .sp-scroll,
+  .sp-content.sp-flexrow { overflow: visible !important; overflow-y: visible !important; }
+  /* Inner scroll panels (lists capped with maxHeight) should not trap the scroll */
+  .sp-flexrow { max-height: none !important; }
+
+  /* Header: tighter padding on phones so it doesn't crowd the ☰ + profile */
+  .sp-header { padding: 10px 14px !important; }
+
+  /* Recharts / chart wrappers must never exceed the viewport width */
+  .recharts-responsive-container, .recharts-wrapper { max-width: 100% !important; }
+
+  /* Comfortable touch targets for young LD users (min 44px is the a11y guideline) */
+  button, .sp-tap { min-height: 44px; }
+}
+
+/* Extra-small phones (≤ 420px): make the 4-up stats a single column and
+   hide the header's secondary profile text so the bar stays uncluttered */
+@media (max-width: 420px) {
+  .sp-stats-4 { grid-template-columns: 1fr !important; }
+  .sp-content { padding: 12px !important; }
+  .sp-hide-xs { display: none !important; }
+}
+
+/* Global safety net: prevent any element from causing horizontal scroll on
+   small screens (a common cause of the "page shifts sideways" bug on phones) */
+@media (max-width: 768px) {
+  html, body, #root { max-width: 100vw; overflow-x: hidden; }
+  img, svg, video, canvas { max-width: 100%; height: auto; }
 }
 
 @keyframes sp-fade-in { from { opacity: 0; } to { opacity: 1; } }

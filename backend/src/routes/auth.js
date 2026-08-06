@@ -66,18 +66,32 @@ router.post('/credentials', validate(adminCredentialsSchema), async (req, res) =
 // Register (create teacher account)
 router.post('/register', validate(registerSchema), async (req, res, next) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, role, class_grade, age } = req.body;
+    const userRole = ['student', 'teacher', 'parent'].includes(role) ? role : 'teacher';
 
     const exists = await query('SELECT id FROM users WHERE email = $1', [email.toLowerCase().trim()]);
     if (exists.rows.length) return res.status(409).json({ error: 'Email already registered' });
 
     const hash = await bcrypt.hash(password, 10);
+    const userId = uuid();
     const { rows } = await query(
       `INSERT INTO users (id, name, email, phone, password_hash, role)
-       VALUES ($1,$2,$3,$4,$5,'teacher') RETURNING id, name, email, phone, role, school_id, created_at`,
-      [uuid(), name.trim(), email.toLowerCase().trim(), phone || null, hash]
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, name, email, phone, role, school_id, created_at`,
+      [userId, name.trim(), email.toLowerCase().trim(), phone || null, hash, userRole]
     );
-    const user  = rows[0];
+    const user = rows[0];
+
+    // For students, create the student profile row so grade/age drive
+    // grade-aware AI questions and the rest of the LD flow.
+    if (userRole === 'student') {
+      await query(
+        `INSERT INTO students (user_id, class_grade, age, current_level)
+         VALUES ($1, $2, $3, 1)
+         ON CONFLICT (user_id) DO UPDATE SET class_grade = EXCLUDED.class_grade, age = EXCLUDED.age`,
+        [userId, class_grade || null, age || null]
+      ).catch((e) => console.warn('[register] student row insert failed:', e.message));
+    }
+
     const token = sign({ id: user.id, role: user.role, schoolId: user.school_id });
     res.status(201).json({ token, user });
   } catch (err) { next(err); }

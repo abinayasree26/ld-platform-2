@@ -34,40 +34,52 @@ const StudentDashboardWeb = () => {
     // Only ever redirect on an explicit "not screened yet" — never on a failed
     // request or an endpoint the backend doesn't implement in demo mode, both of
     // which would otherwise look identical to a real "unscreened" response.
-    ldAPI.screeningStatus()
-      .then((s) => s)
-      .then((s) => { if (s?.screened === false) navigate('/student/screening'); })
-      .catch(() => {});
+    // Guard against the bounce loop: if the student has completed a screening
+    // locally OR the server says screened, never auto-redirect. Only send a
+    // brand-new student (no local record AND server confirms not screened) to
+    // the assessment, and only once per session.
+    const localScreened = !!getDashboardProgress()?.lastScreening;
+    const alreadyRedirected = sessionStorage.getItem('screening_redirected') === '1';
+    if (!localScreened && !alreadyRedirected) {
+      ldAPI.screeningStatus()
+        .then((s) => {
+          if (s?.screened === false) {
+            sessionStorage.setItem('screening_redirected', '1');
+            navigate('/student/screening');
+          }
+        })
+        .catch(() => {});
+    }
 
     Promise.all([
-      studentAPI.getStudent(studentId).catch(() => ({})),
-      analyticsAPI.student(studentId).catch(() => null),
+      // Use the current-student endpoints (real DB). By-ID paths 404 in real mode.
+      studentAPI.getMe().catch(() => ({})),
+      analyticsAPI.me().catch(() => null),
     ])
       .then(([studentData, analyticsData]) => {
         setProfile(studentData?.profile || null);
-        // Merge local progress (from progressStore) with backend analytics
+        // Backend (real DB) is the source of truth. Fall back to local
+        // progress only for fields the backend has no data for, so the
+        // dashboard is consistent across devices/browsers/origins.
         const local = getDashboardProgress();
-        const merged = { ...analyticsData };
-        
-        // Use local level if higher
-        if (local.level > (merged.level || 0)) merged.level = local.level;
-        // Use local streak if higher
-        if (local.streak > (merged.streak || 0)) merged.streak = local.streak;
-        // Add local practice time
-        if (local.totalPracticeMinutes > 0) merged.totalPracticeMinutes = (merged.totalPracticeMinutes || 0) + local.totalPracticeMinutes;
-        // Use local tests count
-        if (local.totalTests > 0) merged.totalTests = (merged.totalTests || 0) + local.totalTests;
-        // Override weekly days with local data (more accurate)
-        if (local.weekDays.some(d => d === true)) merged.weekDays = local.weekDays;
-        // Merge category mastery (local overrides if available)
-        if (local.categoryMastery.length > 0) merged.categoryMastery = local.categoryMastery;
-        // Merge recent sessions (local first, then backend)
-        if (local.recentSessions.length > 0) {
-          merged.recentSessions = [...local.recentSessions, ...(merged.recentSessions || [])].slice(0, 5);
-        }
-        // Last screening from local
-        if (local.lastScreening) merged.lastScreening = local.lastScreening;
-        
+        const b = analyticsData || {};
+        const pick = (dbVal, localVal) =>
+          (dbVal !== undefined && dbVal !== null && dbVal !== 0) ? dbVal : localVal;
+        const merged = {
+          ...b,
+          level:                pick(b.level, local.level),
+          streak:               pick(b.streak, local.streak),
+          totalPractices:       pick(b.totalPractices, local.totalPractices),
+          totalPracticeMinutes: pick(b.totalPracticeMinutes, local.totalPracticeMinutes),
+          totalTests:           pick(b.totalTests, local.totalTests),
+          avgScore:             pick(b.avgScore, local.avgScore),
+          mastery:              pick(b.mastery, local.mastery),
+          categoryMastery:      (b.categoryMastery && b.categoryMastery.length) ? b.categoryMastery : local.categoryMastery,
+          recentSessions:       (b.recentSessions && b.recentSessions.length) ? b.recentSessions : local.recentSessions,
+          weekDays:             (b.weekDays && b.weekDays.some(d => d)) ? b.weekDays : local.weekDays,
+          lastScreening:        b.lastScreening || local.lastScreening,
+        };
+
         setAnalytics(merged);
       })
       .catch(() => toast.error('Could not load dashboard'))
@@ -108,7 +120,7 @@ const StudentDashboardWeb = () => {
   const card = { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
       <StudentSidebar />
 
@@ -186,7 +198,7 @@ const StudentDashboardWeb = () => {
               <h3 style={{ fontSize: 10, fontWeight: 700, color: '#334155', margin: '0 0 4px' }}>📈 My Score Progress</h3>
               {trend.length > 1 ? (
                 <ResponsiveContainer width="100%" height={60}>
-                  <AreaChart data={trend.map(t => ({ ...t, label: new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={trend.map((t, i) => ({ ...t, label: t.label || (t.date ? new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : `#${i + 1}`) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />

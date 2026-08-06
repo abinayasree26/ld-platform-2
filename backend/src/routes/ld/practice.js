@@ -19,10 +19,85 @@ const { v4: uuid } = require('uuid');
 const { query } = require('../../config/database');
 const { requireAuth } = require('../../middleware/auth');
 const practiceEngine = require('../../services/practiceEngine');
+const llamaService = require('../../services/llamaService');
+const questionPool = require('../../services/questionPool');
 
 // ═══════════════════════════════════════════════════════════════════
 // ADAPTIVE ENGINE ROUTES (NEW — FR-03)
 // ═══════════════════════════════════════════════════════════════════
+
+// POST /generate — AI-generated, grade & level aware practice questions.
+// Fresh questions each time (no repeats on retake). Frontend falls back to
+// its built-in questions if this returns null (AI offline/slow).
+router.post('/generate', requireAuth, async (req, res, next) => {
+  try {
+    const { category, count } = req.body;
+    if (!category) return res.status(400).json({ error: 'category required' });
+
+    let profile = {};
+    try {
+      const { rows } = await query(
+        `SELECT class_grade, age, current_level, ld_type FROM students WHERE user_id = $1`,
+        [req.user.id]
+      );
+      profile = rows[0] || {};
+    } catch { /* no profile - AI uses level only */ }
+
+    const grade = profile.class_grade || null;
+    const level = profile.current_level || 1;
+    const ldType = profile.ld_type || 'not_detected';
+    const n = count || 5;
+
+    // ONLINE: generate fresh via AI, filtering out anything the student has
+    // already seen so retakes are genuinely new (not mostly repeats).
+    if (await llamaService.isAvailable()) {
+      const seen = await questionPool.getSeenTexts(req.user.id, { scope: 'practice', category });
+      const norm = (s) => String(s || '').trim().toLowerCase();
+      const collected = [];
+      const collectedKeys = new Set();
+
+      // Up to 3 passes: over-generate, drop seen + in-batch duplicates, until we have n fresh ones.
+      for (let attempt = 0; attempt < 3 && collected.length < n; attempt++) {
+        const batch = await llamaService.generatePracticeQuestions({
+          category, grade, age: profile.age, level, ldType,
+          count: n + 5, // over-generate to survive filtering
+        });
+        if (!batch || !batch.length) break;
+        for (const q of batch) {
+          const key = norm(q.q);
+          if (!key || seen.has(key) || collectedKeys.has(key)) continue;
+          collectedKeys.add(key);
+          collected.push(q);
+          if (collected.length >= n) break;
+        }
+      }
+
+      if (collected.length) {
+        const fresh = collected.slice(0, n);
+        // Save to the pool, then mark the saved rows as seen so they never
+        // repeat for this student on the next attempt.
+        const savedIds = await questionPool.savePooled({
+          scope: 'practice', category, grade, level, ldType, questions: fresh,
+        });
+        if (savedIds && savedIds.length) {
+          questionPool.markSeen(req.user.id, savedIds).catch(() => {});
+        }
+        return res.json({ questions: fresh, source: 'ai', grade, level });
+      }
+    }
+
+    // OFFLINE (or AI failed): serve from the stored pool, avoiding repeats.
+    const pooled = await questionPool.getPooled({ scope: 'practice', category, grade, level, userId: req.user.id, count: n });
+    if (pooled && pooled.length) {
+      questionPool.markSeen(req.user.id, pooled.map(q => q._poolId)).catch(() => {});
+      const clean = pooled.map(({ _poolId, ...q }) => q);
+      return res.json({ questions: clean, source: 'pool', grade, level });
+    }
+
+    // Last resort: frontend uses its built-in hardcoded questions.
+    return res.json({ questions: null, source: 'fallback', reason: 'no_pool_no_ai' });
+  } catch (err) { next(err); }
+});
 
 // GET /start — Start an adaptive practice session
 router.get('/start', requireAuth, async (req, res, next) => {
@@ -45,11 +120,40 @@ router.post('/quick-submit', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'category and exercises_total required' });
     }
     const id = uuid();
+    // NOTE: shared DB uses student_id (not user_id) on practice_sessions.
     await query(
-      `INSERT INTO practice_sessions (id, user_id, session_type, status, exercises_total, exercises_correct, completed_at)
+      `INSERT INTO practice_sessions (id, student_id, session_type, status, exercises_total, exercises_correct, completed_at)
        VALUES ($1, $2, $3, 'completed', $4, $5, NOW())`,
       [id, req.user.id, category, exercises_total || 0, exercises_correct || 0]
     );
+
+    // ── Update streak on the students table (what the dashboard reads) ──
+    // Compare last activity date to today: same day = no change, yesterday =
+    // +1, older/none = reset to 1.
+    try {
+      const st = (await query(
+        'SELECT streak_count, last_activity_at FROM students WHERE user_id = $1',
+        [req.user.id]
+      )).rows[0] || {};
+      const last = st.last_activity_at ? new Date(st.last_activity_at) : null;
+      let newStreak;
+      if (!last) {
+        newStreak = 1;
+      } else {
+        const dayMs = 24 * 60 * 60 * 1000;
+        const d0 = new Date(new Date().toDateString()).getTime();
+        const d1 = new Date(last.toDateString()).getTime();
+        const diffDays = Math.round((d0 - d1) / dayMs);
+        if (diffDays === 0) newStreak = st.streak_count || 1;      // already today
+        else if (diffDays === 1) newStreak = (st.streak_count || 0) + 1; // consecutive
+        else newStreak = 1;                                        // gap -> reset
+      }
+      await query(
+        `UPDATE students SET streak_count = $2, last_activity_at = NOW() WHERE user_id = $1`,
+        [req.user.id, newStreak]
+      );
+    } catch (e) { /* streak update is best-effort */ }
+
     res.json({ success: true, session_id: id });
   } catch (err) { next(err); }
 });
@@ -181,7 +285,7 @@ router.post('/sessions/start', requireAuth, async (req, res, next) => {
   try {
     const { session_type = 'practice' } = req.body;
     const { rows } = await query(
-      `INSERT INTO practice_sessions (id, user_id, session_type, status)
+      `INSERT INTO practice_sessions (id, student_id, session_type, status)
        VALUES ($1,$2,$3,'active') RETURNING *`,
       [uuid(), req.user.id, session_type]
     );
@@ -204,7 +308,7 @@ router.post('/sessions/:sessionId/attempt', requireAuth, async (req, res, next) 
 
     if (!correct && error_type) {
       await query(
-        `INSERT INTO student_errors (id, user_id, exercise_id, error_type)
+        `INSERT INTO student_errors (id, student_id, exercise_id, error_type)
          VALUES ($1,$2,$3,$4)`,
         [uuid(), req.user.id, exercise_id, error_type]
       );
@@ -220,7 +324,7 @@ router.post('/sessions/:sessionId/complete', requireAuth, async (req, res, next)
     const { duration_minutes } = req.body;
     await query(
       `UPDATE practice_sessions SET status='completed', duration_minutes=$1, completed_at=NOW()
-       WHERE id=$2 AND user_id=$3`,
+       WHERE id=$2 AND student_id=$3`,
       [duration_minutes || 0, req.params.sessionId, req.user.id]
     );
     res.json({ ok: true });
@@ -232,7 +336,7 @@ router.get('/errors', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await query(
       `SELECT error_type, COUNT(*)::int AS count FROM student_errors
-       WHERE user_id=$1 AND created_at > NOW() - INTERVAL '30 days'
+       WHERE student_id=$1 AND created_at > NOW() - INTERVAL '30 days'
        GROUP BY error_type ORDER BY count DESC`,
       [req.user.id]
     );
@@ -249,7 +353,7 @@ router.post('/sessions/sync', requireAuth, async (req, res, next) => {
       const exists = (await query('SELECT 1 FROM practice_sessions WHERE id=$1', [s.id])).rows.length;
       if (!exists) {
         await query(
-          `INSERT INTO practice_sessions (id, user_id, session_type, status, duration_minutes, created_at)
+          `INSERT INTO practice_sessions (id, student_id, session_type, status, duration_minutes, created_at)
            VALUES ($1,$2,$3,'completed',$4,$5) ON CONFLICT DO NOTHING`,
           [s.id, req.user.id, s.session_type || 'practice', s.duration_minutes || 0, s.created_at || new Date()]
         );

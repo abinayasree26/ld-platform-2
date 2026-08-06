@@ -17,7 +17,8 @@ const router = require('express').Router();
 const { v4: uuid } = require('uuid');
 const { query } = require('../../config/database');
 const { requireAuth } = require('../../middleware/auth');
-const { generateWrongAnswerFeedback } = require('../../services/llamaService');
+const { generateWrongAnswerFeedback, generatePracticeQuestions, isAvailable } = require('../../services/llamaService');
+const questionPool = require('../../services/questionPool');
 
 // ─── GET /levels — All levels with unlock status ────────────────────
 router.get('/levels', requireAuth, async (req, res, next) => {
@@ -36,17 +37,90 @@ router.get('/levels', requireAuth, async (req, res, next) => {
 });
 
 // ─── GET /questions — Questions for a specific level ────────────────
+// AI-first: generates fresh, grade-aware questions each attempt (no repeats),
+// PERSISTS them to test_questions so /submit can grade by id, and marks them
+// ai_generated so they don't pollute the shared seeded pool. Falls back to the
+// seeded questions if the AI is unavailable or returns nothing.
 router.get('/questions', requireAuth, async (req, res, next) => {
   try {
     const level = parseInt(req.query.level) || 1;
+
+    // Student profile drives grade-appropriate difficulty
+    let profile = {};
+    try {
+      profile = (await query(
+        'SELECT class_grade, age, ld_type FROM students WHERE user_id=$1',
+        [req.user.id]
+      )).rows[0] || {};
+    } catch { /* no profile */ }
+
+    // Try AI generation (10 questions per level test)
+    if (await isAvailable()) {
+      try {
+        const aiQs = await generatePracticeQuestions({
+          category: `Level ${level} progression test (reading, phonics, writing, math mix)`,
+          grade: profile.class_grade,
+          age: profile.age,
+          level,
+          ldType: profile.ld_type || 'not_detected',
+          count: 10,
+        });
+        if (Array.isArray(aiQs) && aiQs.length) {
+          // Persist each generated question so /submit can grade by id
+          const inserted = [];
+          for (const q of aiQs) {
+            const id = uuid();
+            await query(
+              `INSERT INTO test_questions (id, level, subject, category, question_type, question_text, options_json, correct_answer, is_active, ai_generated)
+               VALUES ($1,$2,$3,$4,'mcq',$5,$6,$7,TRUE,TRUE)`,
+              [id, level, 'english', 'mixed', q.q, JSON.stringify(q.options), q.answer]
+            );
+            inserted.push({ id, level, question_type: 'mcq', question_text: q.q, options: q.options, correct_answer: undefined });
+          }
+          // Save to the durable offline pool (grade-aware) for future offline use
+          questionPool.savePooled({
+            scope: 'test', category: 'mixed', grade: profile.class_grade || null, level,
+            ldType: profile.ld_type || 'not_detected', questions: aiQs,
+          }).catch(() => {});
+          // Do NOT send correct_answer to the client
+          const safe = inserted.map(({ correct_answer, ...rest }) => rest);
+          return res.json({ questions: safe, source: 'ai' });
+        }
+      } catch (e) {
+        console.error('[tests] AI generation failed, using seeded pool:', e.message);
+      }
+    }
+
+    // OFFLINE tier: pull grade-aware questions from the durable pool, then
+    // materialize them into test_questions so /submit can grade by id.
+    const pooled = await questionPool.getPooled({
+      scope: 'test', category: 'mixed', grade: profile.class_grade || null,
+      level, userId: req.user.id, count: 10,
+    });
+    if (pooled && pooled.length) {
+      const out = [];
+      for (const q of pooled) {
+        const id = uuid();
+        await query(
+          `INSERT INTO test_questions (id, level, subject, category, question_type, question_text, options_json, correct_answer, is_active, ai_generated)
+           VALUES ($1,$2,$3,$4,'mcq',$5,$6,$7,TRUE,TRUE)`,
+          [id, level, 'english', 'mixed', q.q, JSON.stringify(q.options), q.answer]
+        );
+        out.push({ id, level, question_type: 'mcq', question_text: q.q, options: q.options });
+      }
+      questionPool.markSeen(req.user.id, pooled.map(q => q._poolId)).catch(() => {});
+      return res.json({ questions: out, source: 'pool' });
+    }
+
+    // Last resort: seeded pool (exclude ai_generated so tests stay clean)
     const { rows } = await query(
-      `SELECT id, level, question_type, question_text, options, correct_answer, media_url, audio_url
-       FROM test_questions WHERE level=$1 AND is_active=TRUE
+      `SELECT id, level, question_type, question_text, options_json AS options, correct_answer
+       FROM test_questions
+       WHERE level=$1 AND is_active=TRUE
        ORDER BY RANDOM() LIMIT 20`,
       [level]
     );
-    // Frontend expects { questions: [...] }
-    res.json({ questions: rows });
+    res.json({ questions: rows, source: 'seeded' });
   } catch (err) { next(err); }
 });
 
@@ -79,10 +153,12 @@ router.post('/submit', requireAuth, async (req, res, next) => {
     const durationSec = duration_seconds || (time_taken_ms ? Math.round(time_taken_ms / 1000) : 0);
 
     const attemptId = uuid();
+    // Shared DB test_attempts columns: student_id, score_percent, total_questions,
+    // correct_count, time_taken_ms, answers_json, passed, attempted_at
     await query(
-      `INSERT INTO test_attempts (id, user_id, level, score, passed, duration_seconds, answers)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [attemptId, req.user.id, level, score, passed, durationSec, JSON.stringify(answers)]
+      `INSERT INTO test_attempts (id, student_id, level, score_percent, total_questions, correct_count, time_taken_ms, passed, answers_json)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [attemptId, req.user.id, level, score, answers.length, correct, durationSec * 1000, passed, JSON.stringify(answers)]
     );
 
     if (passed) {
@@ -91,8 +167,8 @@ router.post('/submit', requireAuth, async (req, res, next) => {
         [req.user.id, level]
       );
       await query(
-        `INSERT INTO level_history (id, user_id, from_level, to_level, trigger)
-         VALUES ($1,$2,$3,$4,'test_pass') ON CONFLICT DO NOTHING`,
+        `INSERT INTO level_history (id, student_id, from_level, to_level)
+         VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
         [uuid(), req.user.id, level, Math.min(level + 1, 5)]
       );
     }
@@ -144,7 +220,7 @@ router.post('/submit', requireAuth, async (req, res, next) => {
 router.get('/history', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await query(
-      'SELECT * FROM test_attempts WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20',
+      'SELECT * FROM test_attempts WHERE student_id=$1 ORDER BY attempted_at DESC LIMIT 20',
       [req.user.id]
     );
     res.json({ attempts: rows });

@@ -30,7 +30,7 @@ const CertificationPage = () => {
   const cert = certKey ? CERTIFICATE_TYPES.find((c) => c.key === certKey) : null;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <StudentSidebar />
 
       {/* ═══ MAIN CONTENT ═══ */}
