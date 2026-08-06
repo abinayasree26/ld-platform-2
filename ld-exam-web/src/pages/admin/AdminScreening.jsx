@@ -105,9 +105,16 @@ const AdminScreening = () => {
         }
       } catch { /* ignore */ }
       setResults(list);
-      setStats(data.stats || null);
     } catch {
-      toast.error('Failed to load screening data');
+      let list = [];
+      try {
+        const customSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        if (customSubmissions.length > 0) {
+          list = customSubmissions;
+        }
+      } catch { /* ignore */ }
+      setResults(list);
+      setStats({ total: list.length, completed: list.length, pending: 0 });
     } finally {
       setLoading(false);
     }
