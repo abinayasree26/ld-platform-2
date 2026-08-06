@@ -226,9 +226,38 @@ const AdminStudents = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await resp.json();
-      setStudents(data.students || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 1);
+      let list = data.students || [];
+      try {
+        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        if (customStudents.length > 0) {
+          const existingEmails = new Set(list.map(s => s.email));
+          const newCustom = customStudents.filter(s => !existingEmails.has(s.email));
+          list = [...newCustom, ...list];
+        }
+
+        if (customScreenings.length > 0) {
+          const screeningMap = new Map(customScreenings.map(sc => [sc.studentEmail, sc]));
+          list = list.map(s => {
+            const sc = screeningMap.get(s.email);
+            if (sc) {
+              return {
+                ...s,
+                ldType: sc.ldType ? sc.ldType.charAt(0).toUpperCase() + sc.ldType.slice(1) : s.ldType,
+                severity: sc.severity || 'Moderate',
+                screened: true,
+                status: 'active',
+              };
+            }
+            return s;
+          });
+        }
+      } catch { /* ignore */ }
+
+      setStudents(list);
+      setTotal(list.length);
+      setTotalPages(Math.max(1, Math.ceil(list.length / 10)));
     } catch {
       toast.error('Failed to load students');
     } finally {

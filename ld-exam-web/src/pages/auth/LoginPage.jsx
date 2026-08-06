@@ -157,6 +157,27 @@ const LoginPage = () => {
       const data = await parseResponseJson(resp);
       if (!resp.ok) throw new Error(data.error || 'Registration failed');
       setDemoAuth(data.user, data.token);
+
+      try {
+        const newStudent = {
+          id: data.user?.id || `st-${Date.now()}`,
+          name: data.user?.name || name.trim() || 'Student',
+          email: data.user?.email || email.trim(),
+          grade: grade ? `Class ${grade}` : 'Class 5',
+          ldType: 'Unscreened',
+          severity: 'Pending',
+          status: 'active',
+          joined: new Date().toISOString().slice(0, 10),
+          subscription: 'Free Tier',
+          screened: false,
+        };
+        const stored = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const existingIds = new Set(stored.map(s => s.email));
+        if (!existingIds.has(newStudent.email)) {
+          localStorage.setItem('admin_registered_students', JSON.stringify([newStudent, ...stored]));
+        }
+      } catch { /* ignore */ }
+
       toast.success('Account created! Welcome.');
       const dest = data.user.role === 'parent' ? '/parent' : data.user.role === 'student' ? '/student' : '/dashboard';
       setPendingNav(dest);

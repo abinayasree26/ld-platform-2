@@ -39,7 +39,22 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     adminAPI.getOverview()
-      .then(setData)
+      .then((resData) => {
+        let merged = { ...resData };
+        try {
+          const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+          const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+          if (customStudents.length > 0) {
+            merged.totalStudents = (merged.totalStudents || 0) + customStudents.length;
+            merged.newSignupsThisWeek = (merged.newSignupsThisWeek || 0) + customStudents.length;
+            merged.activeToday = (merged.activeToday || 0) + customStudents.length;
+          }
+          if (customScreenings.length > 0) {
+            merged.totalScreened = (merged.totalScreened || 0) + customScreenings.length;
+          }
+        } catch { /* ignore */ }
+        setData(merged);
+      })
       .catch(() => toast.error('Could not load dashboard data'))
       .finally(() => setLoading(false));
   }, []);
