@@ -110,8 +110,10 @@ const ThemeProvider = ({ children }) => {
   useEffect(() => {
     const root = document.documentElement;
     if (mode === 'dark') {
+      root.classList.add('dark');
       root.classList.add('ld-dark');
     } else {
+      root.classList.remove('dark');
       root.classList.remove('ld-dark');
     }
     root.style.setProperty('--ld-font-size', FONT_SIZES[fontSize] || FONT_SIZES.medium);

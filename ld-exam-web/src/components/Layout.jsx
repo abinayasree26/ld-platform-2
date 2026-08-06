@@ -38,6 +38,13 @@ const Layout = ({ children }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [savedSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_platform_settings');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+
   useEffect(() => { initTheme(); }, []);
 
   // Close sidebar on route change (mobile)
@@ -54,6 +61,9 @@ const Layout = ({ children }) => {
     return () => document.removeEventListener('click', close);
   }, []);
 
+  const appName = savedSettings?.platform?.name || 'LD Support';
+  const adminEmail = savedSettings?.admin?.email || user?.email || 'admin@ldschools.in';
+
   return (
     <div className="h-screen flex bg-[var(--bg-main)] transition-colors duration-300 overflow-hidden">
       {/* Mobile overlay */}
@@ -68,9 +78,9 @@ const Layout = ({ children }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl accent-gradient flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-blue-500/30">
-                L
+                {appName[0]?.toUpperCase() || 'L'}
               </div>
-              <h1 className="text-white text-xl font-extrabold tracking-tight">LD Support</h1>
+              <h1 className="text-white text-xl font-extrabold tracking-tight truncate">{appName}</h1>
             </div>
             {/* Close button on mobile */}
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white text-xl">✕</button>
@@ -149,16 +159,17 @@ const Layout = ({ children }) => {
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setProfileDropdown(!profileDropdown); setFontDropdown(false); }}
-                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-md"
+                className="flex items-center gap-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-md"
               >
-                <div className="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold shadow">
                   {(user?.name || 'Admin')[0].toUpperCase()}
                 </div>
-                <span className="text-white text-xs font-bold hidden sm:inline">{user?.name || 'Demo admin'}</span>
-                <span className="bg-blue-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wide">
-                  {user?.role || 'SUPER_ADMIN'}
-                </span>
-                <span className="text-slate-400 text-xs ml-0.5">▾</span>
+                <div className="flex flex-col text-left leading-tight">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400">Admin</span>
+                  <span className="text-xs font-bold text-white flex items-center gap-1">
+                    Administrator <span className="text-[10px] text-slate-400">▾</span>
+                  </span>
+                </div>
               </button>
 
               {profileDropdown && (
@@ -168,10 +179,9 @@ const Layout = ({ children }) => {
                 >
                   {/* User Profile Card Header */}
                   <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-800/80">
-                    <p className="text-xs font-bold text-white tracking-tight">{user?.name || 'Demo admin'}</p>
-                    <p className="text-[11px] text-slate-400 font-mono mt-0.5">{user?.email || 'admin@ldschools.in'}</p>
-                    <div className="mt-2 inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                      <span>🛡️</span> {user?.role === 'super_admin' ? 'Super Admin (Full Access)' : 'School Administrator'}
+                    <p className="text-xs font-bold text-white tracking-tight">{user?.name || 'Admin User'}</p>
+                    <div className="mt-1.5 inline-flex items-center gap-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      <span>🛡️</span> Full System Access
                     </div>
                   </div>
 
@@ -249,12 +259,12 @@ const Layout = ({ children }) => {
                 <span className="font-bold text-white">{user?.name || 'Demo admin'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                <span className="text-slate-400 font-bold uppercase">Email</span>
-                <span className="font-mono text-purple-400">{user?.email || 'admin@ldschools.in'}</span>
+                <span className="text-slate-400 font-bold uppercase">Username</span>
+                <span className="font-mono text-purple-400">@{savedSettings?.admin?.username || 'admin'}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
                 <span className="text-slate-400 font-bold uppercase">Role</span>
-                <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">{user?.role || 'SUPER_ADMIN'}</span>
+                <span className="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">Admin</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
                 <span className="text-slate-400 font-bold uppercase">Access Scope</span>

@@ -77,7 +77,18 @@ const AdminNotifications = () => {
   useEffect(() => {
     fetch('/api/admin/notifications', { headers })
       .then(r => r.json())
-      .then(setData)
+      .then(fetchedData => {
+        try {
+          const customAnnouncements = JSON.parse(localStorage.getItem('admin_created_notifications') || '[]');
+          if (customAnnouncements.length > 0) {
+            const apiList = fetchedData?.notifications || [];
+            const existingIds = new Set(apiList.map(n => n.id));
+            const newCustom = customAnnouncements.filter(n => !existingIds.has(n.id));
+            fetchedData.notifications = [...newCustom, ...apiList];
+          }
+        } catch { /* ignore */ }
+        setData(fetchedData);
+      })
       .catch(() => toast.error('Failed to load notifications'))
       .finally(() => setLoading(false));
   }, []);
@@ -115,6 +126,12 @@ const AdminNotifications = () => {
       delivered: notification.schedule === 'now' ? Math.floor(Math.random() * 50 + 100) : 0,
       opened: notification.schedule === 'now' ? Math.floor(Math.random() * 30 + 50) : 0,
     };
+
+    try {
+      const storedCustom = JSON.parse(localStorage.getItem('admin_created_notifications') || '[]');
+      localStorage.setItem('admin_created_notifications', JSON.stringify([newNotification, ...storedCustom]));
+    } catch { /* ignore */ }
+
     setData(prev => ({ ...prev, notifications: [newNotification, ...(prev?.notifications || [])] }));
     setShowCompose(false);
   };

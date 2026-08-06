@@ -18,15 +18,40 @@ if (env.demoMode || !process.env.REDIS_URL) {
 // ─── Real Redis connection ─────────────────────────────────────────
 const Redis = require('ioredis');
 
+let isConnected = false;
+let warningLogged = false;
+
 const redis = new Redis(env.redis.url, {
   password:            env.redis.password,
   lazyConnect:         true,
-  retryStrategy:       (times) => Math.min(times * 200, 3000),
+  retryStrategy:       (times) => {
+    if (times > 3) {
+      if (!warningLogged) {
+        warningLogged = true;
+        console.warn('[Redis] Could not connect — token blacklist disabled (Redis server offline)');
+      }
+      return null; // Stop retrying when offline
+    }
+    return Math.min(times * 200, 1000);
+  },
   enableOfflineQueue:  false,
   maxRetriesPerRequest: 3,
 });
 
-redis.on('error', (err) => console.warn('[Redis] Connection error:', err.message));
-redis.connect().catch(() => console.warn('[Redis] Could not connect — token blacklist disabled'));
+redis.on('error', (err) => {
+  if (isConnected) {
+    console.warn('[Redis] Connection error:', err.message);
+  }
+});
+
+redis.connect().then(() => {
+  isConnected = true;
+  console.log('[Redis] Connected successfully');
+}).catch(() => {
+  if (!warningLogged) {
+    warningLogged = true;
+    console.warn('[Redis] Could not connect — token blacklist disabled (Redis server offline)');
+  }
+});
 
 module.exports = redis;

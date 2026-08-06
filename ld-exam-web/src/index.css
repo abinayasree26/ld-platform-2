@@ -15,10 +15,11 @@
     --glass-border: rgba(255, 255, 255, 0.2);
   }
 
-  .dark {
-    --bg-main: #000000;
-    --bg-card: #000000;
-    --bg-sidebar: #000000;
+  .dark,
+  .ld-dark {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --bg-sidebar: #0f172a;
     --text-main: #F8FAFC;
     --text-muted: #94A3B8;
     --border-main: #1E293B;
