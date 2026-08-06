@@ -1,7 +1,7 @@
 const env = require('./env');
 
 // ─── Demo mode: no-op Redis ────────────────────────────────────────
-if (env.demoMode) {
+if (env.demoMode || !process.env.REDIS_URL) {
   const noop = {
     get:    async () => null,
     set:    async () => 'OK',

@@ -22,15 +22,39 @@ router.post('/submit', requireAuth, async (req, res, next) => {
     const { answers, duration_seconds } = req.body;
     if (!Array.isArray(answers) || !answers.length) return res.status(400).json({ error: 'answers[] required' });
 
-    // Prepare data for AI classifier
-    const classifierInput = answers.map(a => ({
-      questionText: a.question_text || `Question ${a.question_id}`,
-      category: a.category || 'reading',
-      studentAnswer: a.student_answer,
-      correctAnswer: a.correct_answer,
-      isCorrect: a.is_correct,
-      responseTimeMs: a.response_time_ms || 0,
-    }));
+    // ── Server-side scoring (never trust client-sent is_correct) ──
+    // Look up the real correct answers + metadata from the DB for the
+    // submitted question IDs, then compute correctness on the server.
+    const ids = answers.map(a => a.question_id).filter(Boolean);
+    let qmap = {};
+    if (ids.length) {
+      const { rows } = await query(
+        `SELECT id, question_text, category, correct_answer
+         FROM screening_questions WHERE id = ANY($1)`,
+        [ids]
+      );
+      qmap = Object.fromEntries(rows.map(q => [String(q.id), q]));
+    }
+
+    // Normalize for a robust comparison (case/space tolerant)
+    const norm = (v) => (v === null || v === undefined ? '' : String(v).trim().toLowerCase());
+
+    const classifierInput = answers.map(a => {
+      const q = qmap[String(a.question_id)] || {};
+      const correctAnswer = q.correct_answer;
+      const isCorrect = correctAnswer !== undefined && correctAnswer !== null
+        ? norm(a.student_answer) === norm(correctAnswer)
+        : false;
+      return {
+        questionText: q.question_text || a.question_text || `Question ${a.question_id}`,
+        category: q.category || a.category || 'reading',
+        ld_target: a.ld_target || q.category || null,
+        studentAnswer: a.student_answer,
+        correctAnswer,
+        isCorrect,
+        responseTimeMs: a.response_time_ms || 0,
+      };
+    });
 
     // Run AI classification (falls back to rule-based if no API key)
     const result = await classifyLD(classifierInput);

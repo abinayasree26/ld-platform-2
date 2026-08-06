@@ -44,6 +44,9 @@ const LoginPage = () => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole]         = useState('teacher');
+  // Student registration extras (grade & age drive grade-aware AI questions)
+  const [grade, setGrade]       = useState('');
+  const [age, setAge]           = useState('');
 
   // Admin form fields
   const [adminUsername, setAdminUsername] = useState('');
@@ -113,7 +116,14 @@ const LoginPage = () => {
       const resp = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, role }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role: portalTab === 'student' ? 'student' : role,
+          class_grade: grade ? parseInt(grade, 10) : null,
+          age: age ? parseInt(age, 10) : null,
+        }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || 'Registration failed');
@@ -191,12 +201,29 @@ const LoginPage = () => {
             </form>
           )}
 
-          {/* Student form — email+password only, no registration */}
+          {/* Student form — login OR register */}
           {portalTab === 'student' && (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={mode === 'register' ? handleRegister : handleLogin} className="space-y-4">
               <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-xs text-orange-700 font-medium">
-                Students: log in with the email your teacher used to invite you.
+                {mode === 'register'
+                  ? 'Create your student account to start learning.'
+                  : 'Students: log in with your email and password.'}
               </div>
+
+              {mode === 'register' && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-slate-700">Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
+                    required
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700">Email</label>
                 <input
@@ -208,6 +235,7 @@ const LoginPage = () => {
                   required
                 />
               </div>
+
               <div className="space-y-2">
                 <label className="block text-sm font-bold text-slate-700">Password</label>
                 <input
@@ -219,15 +247,51 @@ const LoginPage = () => {
                   required
                 />
               </div>
+
+              {mode === 'register' && (
+                <div className="flex gap-3">
+                  <div className="space-y-2 flex-1">
+                    <label className="block text-sm font-bold text-slate-700">Grade</label>
+                    <input
+                      type="number" min="1" max="12"
+                      placeholder="1-12"
+                      value={grade}
+                      onChange={(e) => setGrade(e.target.value)}
+                      className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2 flex-1">
+                    <label className="block text-sm font-bold text-slate-700">Age</label>
+                    <input
+                      type="number" min="5" max="18"
+                      placeholder="5-18"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl text-lg shadow-lg shadow-orange-200 transition-all disabled:bg-orange-300"
               >
-                {loading ? 'Signing in…' : 'Student Login'}
+                {loading ? 'Please wait…' : (mode === 'register' ? 'Create Account' : 'Student Login')}
               </button>
-              <p className="text-center text-xs text-slate-400">
-                First time? Check your email for an invite link from your teacher.
+
+              <p className="text-center text-sm text-slate-500">
+                {mode === 'register' ? 'Already have an account? ' : "First time here? "}
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
+                  className="text-orange-600 font-bold hover:underline"
+                >
+                  {mode === 'register' ? 'Log in' : 'Register'}
+                </button>
               </p>
             </form>
           )}

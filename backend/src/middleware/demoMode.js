@@ -113,6 +113,63 @@ demoScreening.get('/questions', (_req, res) => {
   res.json({ questions: DEMO_QUESTIONS, total: DEMO_QUESTIONS.length, estimatedMinutes: 10, progressive: true, levels: 5, questionsPerLevel: 6 });
 });
 
+// Submit — server-side scoring (matches the real /submit contract).
+// Frontend sends answers[] with { question_id, student_answer }.
+// The server looks up each question's real correct_answer and scores it here,
+// so the client never decides correctness (fixes the "No LD Detected" bug).
+demoScreening.post('/submit', (req, res) => {
+  const { answers } = req.body;
+  if (!Array.isArray(answers) || !answers.length) {
+    return res.status(400).json({ error: 'answers[] required' });
+  }
+
+  const qmap = Object.fromEntries(DEMO_QUESTIONS.map(q => [String(q.id), q]));
+  const norm = (v) => (v === null || v === undefined ? '' : String(v).trim().toLowerCase());
+
+  // Score per LD target category
+  const byTarget = {};
+  let totalWrong = 0;
+  answers.forEach(a => {
+    const q = qmap[String(a.question_id)] || {};
+    const target = q.ld_target || a.ld_target || 'dyslexia';
+    const isCorrect = q.correct_answer !== undefined
+      ? norm(a.student_answer) === norm(q.correct_answer)
+      : false;
+    byTarget[target] = byTarget[target] || { wrong: 0, total: 0 };
+    byTarget[target].total += 1;
+    if (!isCorrect) { byTarget[target].wrong += 1; totalWrong += 1; }
+  });
+
+  // Breakdown: % wrong per LD type
+  const breakdown = {};
+  let topType = 'dyslexia';
+  let topScore = -1;
+  Object.entries(byTarget).forEach(([t, v]) => {
+    const score = v.total ? Math.round((v.wrong / v.total) * 100) : 0;
+    breakdown[t] = score;
+    if (score > topScore) { topScore = score; topType = t; }
+  });
+
+  const overallRiskScore = Math.round((totalWrong / answers.length) * 100);
+  const highTypes = Object.entries(breakdown).filter(([, s]) => s >= 40);
+  const ldType = overallRiskScore < 40
+    ? 'not_detected'
+    : (highTypes.length >= 2 ? 'mixed' : topType);
+
+  res.json({
+    sessionId: uuid(),
+    ldType,
+    overallRiskScore,
+    riskScore: overallRiskScore,
+    breakdown,
+    reasoning: `Scored ${totalWrong} of ${answers.length} answers incorrect. Server-side rule-based estimate.`,
+    classifiedBy: 'rule-based',
+    recommendations: ldType === 'not_detected'
+      ? ['Great job! No significant difficulties detected.', 'Keep practising to stay sharp!']
+      : [`Focus on ${ldType} practice exercises.`, 'Practice 10–15 minutes daily.', 'Re-screen in a few weeks to track progress.'],
+  });
+});
+
 demoScreening.post('/start', (req, res) => {
   const sessionId = uuid();
   demoSessions[sessionId] = { answers: [], startedAt: Date.now() };
@@ -201,7 +258,34 @@ demoScreening.get('/history', (_req, res) => {
 });
 
 // ─── Demo Practice Router ──────────────────────────────────────────
+const llamaService = require('../services/llamaService');
 const demoPractice = express.Router();
+
+// Demo AI-generated questions (grade/level aware). Falls back to null so the
+// frontend uses its built-in questions when llama.cpp is offline.
+demoPractice.post('/generate', async (req, res) => {
+  try {
+    const { category, count } = req.body || {};
+    if (!category) return res.status(400).json({ error: 'category required' });
+    if (!(await llamaService.isAvailable())) {
+      return res.json({ questions: null, source: 'fallback', reason: 'ai_unavailable' });
+    }
+    // Demo has no real profile; use a sensible default grade/level.
+    const questions = await llamaService.generatePracticeQuestions({
+      category,
+      grade: req.body.grade || null,
+      age: req.body.age || null,
+      level: req.body.level || 2,
+      ldType: req.body.ldType || 'mixed',
+      count: count || 5,
+    });
+    if (!questions) return res.json({ questions: null, source: 'fallback', reason: 'generation_failed' });
+    res.json({ questions, source: 'ai' });
+  } catch (e) {
+    res.json({ questions: null, source: 'fallback', reason: 'error' });
+  }
+});
+
 
 // 20 AI-recommended exercises per session — personalized based on student's LD type
 // Distribution: 40% current level, 30% review (weak areas), 20% reinforcement, 10% challenge
@@ -593,26 +677,68 @@ demoTests.get('/available', (_req, res) => {
   });
 });
 
-demoTests.post('/start', (req, res) => {
-  const { level } = req.body;
+demoTests.post('/start', async (req, res) => {
+  const { level, grade, age, ldType } = req.body;
   const lvl = level || 3;
+  const attemptId = uuid();
+
+  // AI-first: generate fresh, grade-aware questions (no repeats between attempts).
+  // We keep the correct answers server-side in the attempt for grading, and
+  // never send them to the client.
+  if (await llamaService.isAvailable()) {
+    try {
+      const aiQs = await llamaService.generatePracticeQuestions({
+        category: `Level ${lvl} progression test (reading, phonics, writing, math mix)`,
+        grade: grade || null,
+        age: age || null,
+        level: lvl,
+        ldType: ldType || 'mixed',
+        count: 10,
+      });
+      if (Array.isArray(aiQs) && aiQs.length) {
+        const questions = aiQs.map((q, i) => ({
+          id: `aitq-${lvl}-${i + 1}`,
+          level: lvl,
+          question_type: 'mcq',
+          question_text: q.q,
+          options: q.options,
+        }));
+        // store answer key in-memory for grading
+        const answerKey = {};
+        aiQs.forEach((q, i) => { answerKey[`aitq-${lvl}-${i + 1}`] = { correct_answer: q.answer, question_text: q.q, explanation: q.explanation }; });
+        demoTestAttempts[attemptId] = { level: lvl, answers: [], startedAt: Date.now(), answerKey, ai: true };
+        return res.json({ attemptId, level: lvl, questions, timeLimit: TEST_TIME_LIMITS[lvl], questionsCount: questions.length, source: 'ai' });
+      }
+    } catch (e) {
+      console.error('[demoTests] AI generation failed, using seeded:', e.message);
+    }
+  }
+
+  // Fallback: seeded demo questions
   const questions = testQuestions
     .filter(q => q.level === lvl)
     .map((q, i) => ({ ...q, id: `tq-${lvl}-${i + 1}` }));
-  const attemptId = uuid();
   demoTestAttempts[attemptId] = { level: lvl, answers: [], startedAt: Date.now() };
-  res.json({ attemptId, level: lvl, questions, timeLimit: TEST_TIME_LIMITS[lvl], questionsCount: questions.length });
+  res.json({ attemptId, level: lvl, questions, timeLimit: TEST_TIME_LIMITS[lvl], questionsCount: questions.length, source: 'seeded' });
 });
 
 demoTests.post('/submit-answer', (req, res) => {
   const { attemptId, questionId, answer } = req.body;
   const attempt = demoTestAttempts[attemptId];
   if (attempt) {
-    const levelQs = testQuestions.filter(q => q.level === attempt.level);
-    const qIdx = parseInt(questionId.split('-')[2]) - 1;
-    const q = levelQs[qIdx];
-    const isCorrect = q ? String(answer).trim() === String(q.correct_answer).trim() : false;
-    attempt.answers.push({ questionId, answer, isCorrect, correct_answer: q?.correct_answer, question_text: q?.question_text });
+    let correct_answer, question_text;
+    if (attempt.ai && attempt.answerKey && attempt.answerKey[questionId]) {
+      correct_answer = attempt.answerKey[questionId].correct_answer;
+      question_text = attempt.answerKey[questionId].question_text;
+    } else {
+      const levelQs = testQuestions.filter(q => q.level === attempt.level);
+      const qIdx = parseInt(questionId.split('-')[2]) - 1;
+      const q = levelQs[qIdx];
+      correct_answer = q?.correct_answer;
+      question_text = q?.question_text;
+    }
+    const isCorrect = correct_answer !== undefined && String(answer).trim().toLowerCase() === String(correct_answer).trim().toLowerCase();
+    attempt.answers.push({ questionId, answer, isCorrect, correct_answer, question_text });
   }
   res.json({ received: true });
 });

@@ -64,44 +64,96 @@ const CATEGORIES = [
     key: 'phonics', icon: '🔤', title: 'Phonics', color: '#4f46e5', bg: '#EAEAFE',
     description: 'Match sounds to letters and words',
     questions: [
-      { q: 'Which word starts with the same sound as "ship"?', options: ['Shop', 'Cat', 'Fun', 'Ball'], answer: 'Shop', explanation: '"Ship" and "Shop" both start with the "sh" sound.' },
-      { q: 'Which word rhymes with "light"?', options: ['Night', 'Log', 'Cup', 'Run'], answer: 'Night', explanation: '"Light" and "Night" both end in the "-ight" sound.' },
-      { q: 'Which letters make the "ch" sound in "chair"?', options: ['ch', 'sh', 'th', 'ph'], answer: 'ch', explanation: 'The letters "ch" together make the sound heard at the start of "chair".' },
-      { q: 'Which word has a short "a" sound?', options: ['Cat', 'Cake', 'Car', 'Coat'], answer: 'Cat', explanation: '"Cat" has a short "a" sound, like in "hat". "Cake" and "Car" sound different.' },
-      { q: 'Which word ends with the same sound as "bell"?', options: ['Fall', 'Boat', 'Sun', 'Cup'], answer: 'Fall', explanation: '"Bell" and "Fall" both end with the "l" sound.' },
+      { q: "Which word starts with the same sound as \"ship\"?", options: ["Shop", "Cat", "Fun", "Ball"], answer: "Shop", explanation: "\"Ship\" and \"Shop\" both start with the \"sh\" sound." },
+      { q: "Which word rhymes with \"light\"?", options: ["Night", "Log", "Cup", "Run"], answer: "Night", explanation: "\"Light\" and \"Night\" both end in the \"-ight\" sound." },
+      { q: "Which letters make the \"ch\" sound in \"chair\"?", options: ["ch", "sh", "th", "ph"], answer: "ch", explanation: "The letters \"ch\" make the sound at the start of \"chair\"." },
+      { q: "Which word has a short \"a\" sound?", options: ["Cat", "Cake", "Car", "Coat"], answer: "Cat", explanation: "\"Cat\" has a short \"a\" sound like in \"hat\"." },
+      { q: "Which word ends with the same sound as \"bell\"?", options: ["Fall", "Boat", "Sun", "Cup"], answer: "Fall", explanation: "\"Bell\" and \"Fall\" both end with the \"l\" sound." },
+      { q: "Which word rhymes with \"cake\"?", options: ["Lake", "Cat", "Dog", "Sun"], answer: "Lake", explanation: "\"Cake\" and \"Lake\" both end in the \"-ake\" sound." },
+      { q: "Which word starts with the same sound as \"thumb\"?", options: ["Think", "Table", "Sun", "Fan"], answer: "Think", explanation: "\"Thumb\" and \"Think\" both start with the \"th\" sound." },
+      { q: "Which word has a long \"e\" sound?", options: ["Tree", "Ten", "Top", "Tap"], answer: "Tree", explanation: "\"Tree\" has a long \"e\" sound, like \"ee\"." },
+      { q: "Which word rhymes with \"star\"?", options: ["Car", "Sit", "Run", "Dog"], answer: "Car", explanation: "\"Star\" and \"Car\" both end in the \"-ar\" sound." },
+      { q: "Which letters make the \"sh\" sound?", options: ["sh", "ch", "th", "wh"], answer: "sh", explanation: "The letters \"sh\" make the sound in \"ship\"." },
+      { q: "Which word begins with a \"b\" sound?", options: ["Ball", "Call", "Fall", "Tall"], answer: "Ball", explanation: "\"Ball\" starts with the \"b\" sound." },
+      { q: "Which word rhymes with \"moon\"?", options: ["Spoon", "Man", "Sit", "Cup"], answer: "Spoon", explanation: "\"Moon\" and \"Spoon\" both end in \"-oon\"." },
+      { q: "Which word has a short \"i\" sound?", options: ["Pig", "Pie", "Pine", "Pile"], answer: "Pig", explanation: "\"Pig\" has a short \"i\" sound." },
+      { q: "Which word starts like \"whale\"?", options: ["Wheel", "Table", "Sun", "Cat"], answer: "Wheel", explanation: "\"Whale\" and \"Wheel\" both start with \"wh\"." },
+      { q: "Which word rhymes with \"dog\"?", options: ["Log", "Cat", "Sun", "Pen"], answer: "Log", explanation: "\"Dog\" and \"Log\" both end in \"-og\"." },
+      { q: "Which word has a long \"o\" sound?", options: ["Boat", "Box", "Bat", "Bug"], answer: "Boat", explanation: "\"Boat\" has a long \"o\" sound." },
+      { q: "Which word starts with the \"f\" sound?", options: ["Fish", "Dish", "Wish", "Wash"], answer: "Fish", explanation: "\"Fish\" starts with the \"f\" sound." },
+      { q: "Which word rhymes with \"hat\"?", options: ["Bat", "Bit", "But", "Bet"], answer: "Bat", explanation: "\"Hat\" and \"Bat\" both end in \"-at\"." },
     ],
   },
   {
     key: 'reading', icon: '📖', title: 'Reading', color: '#0f766e', bg: '#E1F5F0',
     description: 'Understand words, sentences and stories',
     questions: [
-      { q: 'Read: "The cat sat on the mat." Where did the cat sit?', options: ['On the mat', 'On the bed', 'On the chair', 'On the roof'], answer: 'On the mat', explanation: 'The sentence says "sat on the mat" — so the cat sat on the mat.' },
-      { q: 'Which word means the opposite of "big"?', options: ['Small', 'Tall', 'Fast', 'Loud'], answer: 'Small', explanation: '"Small" is the opposite of "big". "Tall", "fast", and "loud" mean something different.' },
-      { q: '"She was happy." What did she feel?', options: ['Happy', 'Sad', 'Angry', 'Tired'], answer: 'Happy', explanation: 'The sentence tells us directly: "she was happy".' },
-      { q: 'Which of these is a complete sentence?', options: ['The dog ran fast.', 'Running the dog', 'Fast the dog', 'Dog running'], answer: 'The dog ran fast.', explanation: 'A complete sentence needs a subject ("The dog") and an action ("ran fast").' },
-      { q: 'Which word comes first alphabetically?', options: ['Apple', 'Banana', 'Cherry', 'Date'], answer: 'Apple', explanation: '"A" comes before "B", "C", and "D" in the alphabet, so "Apple" is first.' },
+      { q: "Read: \"The cat sat on the mat.\" Where did the cat sit?", options: ["On the mat", "On the bed", "On the chair", "On the roof"], answer: "On the mat", explanation: "The sentence says \"sat on the mat\"." },
+      { q: "Which word means the opposite of \"big\"?", options: ["Small", "Tall", "Fast", "Loud"], answer: "Small", explanation: "\"Small\" is the opposite of \"big\"." },
+      { q: "\"She was happy.\" What did she feel?", options: ["Happy", "Sad", "Angry", "Tired"], answer: "Happy", explanation: "The sentence says \"she was happy\"." },
+      { q: "Which of these is a complete sentence?", options: ["The dog ran fast.", "Running the dog", "Fast the dog", "Dog running"], answer: "The dog ran fast.", explanation: "A complete sentence has a subject and an action." },
+      { q: "Which word comes first alphabetically?", options: ["Apple", "Banana", "Cherry", "Date"], answer: "Apple", explanation: "\"A\" comes before B, C, and D." },
+      { q: "Which word means the opposite of \"hot\"?", options: ["Cold", "Warm", "Fast", "Big"], answer: "Cold", explanation: "\"Cold\" is the opposite of \"hot\"." },
+      { q: "Read: \"Tom has a red ball.\" What color is the ball?", options: ["Red", "Blue", "Green", "Yellow"], answer: "Red", explanation: "The sentence says the ball is red." },
+      { q: "Which word means \"a place to live\"?", options: ["House", "Car", "Tree", "Book"], answer: "House", explanation: "A house is a place where people live." },
+      { q: "Which word is a naming word (noun)?", options: ["Table", "Run", "Jump", "Fast"], answer: "Table", explanation: "\"Table\" names a thing, so it is a noun." },
+      { q: "Read: \"The sun is bright.\" What is bright?", options: ["The sun", "The moon", "The star", "The lamp"], answer: "The sun", explanation: "The sentence says the sun is bright." },
+      { q: "Which word means the opposite of \"up\"?", options: ["Down", "Left", "Fast", "Big"], answer: "Down", explanation: "\"Down\" is the opposite of \"up\"." },
+      { q: "Which word rhymes and means a color?", options: ["Blue", "Blow", "Blur", "Blot"], answer: "Blue", explanation: "\"Blue\" is a color." },
+      { q: "Read: \"Ravi ate an apple.\" What did Ravi eat?", options: ["An apple", "A banana", "A mango", "An orange"], answer: "An apple", explanation: "The sentence says Ravi ate an apple." },
+      { q: "Which word means \"very small\"?", options: ["Tiny", "Huge", "Tall", "Wide"], answer: "Tiny", explanation: "\"Tiny\" means very small." },
+      { q: "Which is a question sentence?", options: ["What is your name?", "I am happy.", "The dog runs.", "She sat down."], answer: "What is your name?", explanation: "A question asks something and ends with \"?\"." },
+      { q: "Which word means the opposite of \"day\"?", options: ["Night", "Noon", "Morning", "Sun"], answer: "Night", explanation: "\"Night\" is the opposite of \"day\"." },
+      { q: "Read: \"The bird can fly.\" What can the bird do?", options: ["Fly", "Swim", "Run", "Jump"], answer: "Fly", explanation: "The sentence says the bird can fly." },
+      { q: "Which word is a doing word (verb)?", options: ["Jump", "Chair", "Happy", "Blue"], answer: "Jump", explanation: "\"Jump\" is an action, so it is a verb." },
     ],
   },
   {
     key: 'writing', icon: '✍️', title: 'Writing', color: '#c2410c', bg: '#FCEADD',
     description: 'Spelling, grammar and letter formation',
     questions: [
-      { q: 'Which letter is written backwards: b, d, p, q, d?', options: ['b', 'd', 'p', 'q'], answer: 'd', explanation: '"d" appears twice — the second one is the reversed/repeated letter to spot.' },
-      { q: 'Pick the correctly spelled word.', options: ['Recieve', 'Receive', 'Receeve', 'Receve'], answer: 'Receive', explanation: 'Remember the rule "i before e except after c" — so it\'s "Receive".' },
-      { q: 'Which sentence starts with a capital letter correctly?', options: ['The sun is bright.', 'the sun is bright.', 'THE sun is bright.', 'thE sun is bright.'], answer: 'The sun is bright.', explanation: 'Only the first letter of a sentence should be capitalised: "The sun is bright."' },
-      { q: 'What punctuation ends a question?', options: ['?', '.', '!', ','], answer: '?', explanation: 'A question mark "?" is used to end a question.' },
-      { q: 'Which word is plural?', options: ['Cats', 'Cat', 'Catty', 'Cating'], answer: 'Cats', explanation: 'Adding "s" to "Cat" makes it plural: "Cats" means more than one.' },
+      { q: "Which letter is written backwards: b, d, p, q, d?", options: ["b", "d", "p", "q"], answer: "d", explanation: "\"d\" appears twice \u2014 spot the repeated letter." },
+      { q: "Pick the correctly spelled word.", options: ["Recieve", "Receive", "Receeve", "Receve"], answer: "Receive", explanation: "\"i before e except after c\" \u2014 Receive." },
+      { q: "Which sentence starts with a capital letter correctly?", options: ["The sun is bright.", "the sun is bright.", "THE sun is bright.", "thE sun is bright."], answer: "The sun is bright.", explanation: "Only the first letter is capitalised." },
+      { q: "What punctuation ends a question?", options: ["?", ".", "!", ","], answer: "?", explanation: "A question ends with a question mark." },
+      { q: "Which word is plural?", options: ["Cats", "Cat", "Catty", "Cating"], answer: "Cats", explanation: "Adding \"s\" makes \"Cat\" plural." },
+      { q: "Pick the correctly spelled word.", options: ["Freind", "Friend", "Frend", "Friynd"], answer: "Friend", explanation: "\"Friend\" is the correct spelling." },
+      { q: "What punctuation ends a normal sentence?", options: [".", "?", "!", ";"], answer: ".", explanation: "A statement ends with a full stop." },
+      { q: "Which word is spelled correctly?", options: ["Becuase", "Becouse", "Because", "Becaus"], answer: "Because", explanation: "\"Because\" is the correct spelling." },
+      { q: "Which is the correct plural of \"box\"?", options: ["Boxes", "Boxs", "Boxen", "Box"], answer: "Boxes", explanation: "Words ending in \"x\" add \"es\": boxes." },
+      { q: "Which sentence uses a capital \"I\" correctly?", options: ["I like to read.", "i like to read.", "I Like To Read.", "i Like to read."], answer: "I like to read.", explanation: "\"I\" is always capital; the rest are lowercase." },
+      { q: "Pick the correctly spelled word.", options: ["Beutiful", "Beautiful", "Beautifull", "Butiful"], answer: "Beautiful", explanation: "\"Beautiful\" is the correct spelling." },
+      { q: "What mark shows strong feeling or excitement?", options: ["!", ".", "?", ","], answer: "!", explanation: "An exclamation mark shows excitement." },
+      { q: "Which word is spelled correctly?", options: ["Wich", "Which", "Whitch", "Witch"], answer: "Which", explanation: "\"Which\" is the correct spelling." },
+      { q: "Which is the correct plural of \"baby\"?", options: ["Babies", "Babys", "Babyes", "Baby"], answer: "Babies", explanation: "Words ending in \"y\" become \"ies\": babies." },
+      { q: "Pick the correctly spelled word.", options: ["Hapy", "Happy", "Happpy", "Hppy"], answer: "Happy", explanation: "\"Happy\" has two \"p\"s." },
+      { q: "Which sentence is punctuated correctly?", options: ["I am tired.", "I am tired", "i am tired.", "I am tired?"], answer: "I am tired.", explanation: "It starts with a capital and ends with a full stop." },
+      { q: "Which word is spelled correctly?", options: ["Tommorow", "Tomorrow", "Tomorow", "Tommorrow"], answer: "Tomorrow", explanation: "\"Tomorrow\" \u2014 one m, two r's." },
+      { q: "What comes between two items in a list?", options: [",", ".", "?", "!"], answer: ",", explanation: "A comma separates items in a list." },
     ],
   },
   {
     key: 'math', icon: '➗', title: 'Math', color: '#16a34a', bg: '#E3F7E9',
     description: 'Numbers, counting and basic operations',
     questions: [
-      { q: 'What is 7 + 5?', options: ['11', '12', '13', '10'], answer: '12', explanation: '7 + 5 = 12. Try counting up from 7: 8, 9, 10, 11, 12.' },
-      { q: 'Which number is bigger: 342 or 423?', options: ['342', '423', 'Equal', "Can't tell"], answer: '423', explanation: 'Compare the hundreds digit first: 4 (in 423) is bigger than 3 (in 342).' },
-      { q: 'What is 9 - 4?', options: ['4', '5', '6', '13'], answer: '5', explanation: '9 - 4 = 5. Counting down from 9 by 4 lands on 5.' },
-      { q: 'Which shape has 3 sides?', options: ['Triangle', 'Square', 'Circle', 'Pentagon'], answer: 'Triangle', explanation: 'A triangle has exactly 3 sides — "tri" means three.' },
-      { q: 'What is half of 10?', options: ['5', '2', '10', '20'], answer: '5', explanation: 'Half means dividing by 2, and 10 ÷ 2 = 5.' },
+      { q: "What is 2 + 3?", options: ["5", "4", "6", "3"], answer: "5", explanation: "2 plus 3 equals 5." },
+      { q: "What is 10 - 4?", options: ["6", "5", "7", "8"], answer: "6", explanation: "10 minus 4 equals 6." },
+      { q: "Which number is bigger: 7 or 4?", options: ["7", "4", "Equal", "Cannot tell"], answer: "7", explanation: "7 is greater than 4." },
+      { q: "What is 3 x 2?", options: ["6", "5", "8", "4"], answer: "6", explanation: "3 times 2 equals 6." },
+      { q: "How many sides does a triangle have?", options: ["3", "4", "5", "2"], answer: "3", explanation: "A triangle has 3 sides." },
+      { q: "What is half of 10?", options: ["5", "2", "10", "20"], answer: "5", explanation: "Half of 10 is 5." },
+      { q: "What is 4 + 4?", options: ["8", "6", "7", "9"], answer: "8", explanation: "4 plus 4 equals 8." },
+      { q: "What is 9 - 3?", options: ["6", "5", "7", "4"], answer: "6", explanation: "9 minus 3 equals 6." },
+      { q: "Which number is smallest?", options: ["2", "5", "8", "3"], answer: "2", explanation: "2 is the smallest of these numbers." },
+      { q: "What is 5 x 2?", options: ["10", "7", "12", "9"], answer: "10", explanation: "5 times 2 equals 10." },
+      { q: "How many sides does a square have?", options: ["4", "3", "5", "6"], answer: "4", explanation: "A square has 4 equal sides." },
+      { q: "What is 6 + 1?", options: ["7", "5", "8", "6"], answer: "7", explanation: "6 plus 1 equals 7." },
+      { q: "What is 12 - 5?", options: ["7", "6", "8", "5"], answer: "7", explanation: "12 minus 5 equals 7." },
+      { q: "What comes after 8?", options: ["9", "7", "10", "8"], answer: "9", explanation: "9 comes right after 8." },
+      { q: "What is 2 x 4?", options: ["8", "6", "10", "4"], answer: "8", explanation: "2 times 4 equals 8." },
+      { q: "Which is an even number?", options: ["6", "3", "5", "7"], answer: "6", explanation: "6 can be split into two equal halves." },
+      { q: "What is 7 + 5?", options: ["12", "11", "13", "10"], answer: "12", explanation: "7 plus 5 equals 12." },
+      { q: "How many minutes in one hour?", options: ["60", "30", "100", "24"], answer: "60", explanation: "There are 60 minutes in an hour." },
     ],
   },
 ];
@@ -131,20 +183,67 @@ const PracticePage = () => {
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
   const [compliment, setCompliment] = useState('');
+  // Shuffled questions for the CURRENT attempt. Reshuffled on every start so a
+  // retake shows questions (and answer options) in a different order, not the
+  // same sequence as last time.
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  // True while we wait for the AI to generate fresh questions
+  const [preparing, setPreparing] = useState(false);
 
   const category = CATEGORIES.find((c) => c.key === active);
 
-  const startCategory = (key) => {
-    if (!isCategoryUnlocked(subscription, key)) {
-      navigate('/student/profile');
-      return;
+  // Fisher–Yates shuffle (returns a new array, does not mutate the source)
+  const shuffle = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
+    return a;
+  };
+
+  // Build the local shuffled fallback set (used if AI is offline/slow/invalid)
+  const buildFallback = (key) => {
+    const cat = CATEGORIES.find((c) => c.key === key);
+    // Pick a random 5 from the larger bank each time, and shuffle their options.
+    // A big pool + random pick means retakes rarely repeat the same 5 questions.
+    return shuffle(cat?.questions || [])
+      .slice(0, 5)
+      .map((q) => ({ ...q, options: shuffle(q.options) }));
+  };
+
+  const beginQuiz = (key, questions) => {
+    setQuizQuestions(questions);
     setActive(key);
     setCurrent(0);
     setSelected(null);
     setScore(0);
     setFinished(false);
     window._practiceStartTime = Date.now();
+  };
+
+  const startCategory = async (key) => {
+    if (!isCategoryUnlocked(subscription, key)) {
+      navigate('/student/profile');
+      return;
+    }
+    // Try AI-generated (grade/level aware, fresh every retake). Fall back to
+    // the shuffled built-in questions if the AI is offline, slow, or invalid.
+    setPreparing(true);
+    try {
+      const data = await ldAPI.practiceGenerate(key, 5);
+      const aiQs = data?.questions;
+      if (Array.isArray(aiQs) && aiQs.length) {
+        // Shuffle AI options too, for good measure
+        beginQuiz(key, aiQs.map((q) => ({ ...q, options: shuffle(q.options) })));
+      } else {
+        beginQuiz(key, buildFallback(key));
+      }
+    } catch {
+      beginQuiz(key, buildFallback(key));
+    } finally {
+      setPreparing(false);
+    }
   };
 
   // Deep-link support: Recommendations page can send { state: { category } }
@@ -162,7 +261,7 @@ const PracticePage = () => {
   const answer = (opt) => {
     if (selected !== null) return;
     setSelected(opt);
-    if (opt === category.questions[current].answer) {
+    if (opt === quizQuestions[current].answer) {
       setScore((s) => s + 1);
       setCompliment(COMPLIMENTS[Math.floor(Math.random() * COMPLIMENTS.length)]);
     }
@@ -171,7 +270,9 @@ const PracticePage = () => {
   // Save practice session to backend when finished
   const savePracticeSession = (categoryKey, totalQuestions, correctCount) => {
     // Record locally for dashboard updates
-    const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    // Clamp correct count to the total so the percentage can never exceed 100%.
+    const safeCorrect = Math.min(correctCount, totalQuestions);
+    const scorePercent = totalQuestions > 0 ? Math.round((safeCorrect / totalQuestions) * 100) : 0;
     recordPractice({
       category: categoryKey,
       score: scorePercent,
@@ -181,23 +282,23 @@ const PracticePage = () => {
     ldAPI.practiceSubmit({
       category: categoryKey,
       exercises_total: totalQuestions,
-      exercises_correct: correctCount,
+      exercises_correct: safeCorrect,
     }).then(() => fetchHistory()).catch(() => {});
   };
 
   const next = () => {
     setCompliment('');
-    if (current + 1 < category.questions.length) {
+    if (current + 1 < quizQuestions.length) {
       setCurrent((c) => c + 1);
       setSelected(null);
     } else {
       setFinished(true);
-      savePracticeSession(active, category.questions.length, score + (selected === category.questions[current].answer ? 1 : 0));
+      savePracticeSession(active, quizQuestions.length, score + (selected === quizQuestions[current].answer ? 1 : 0));
     }
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <style>{`
         @keyframes pop-bounce {
           0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
@@ -222,6 +323,19 @@ const PracticePage = () => {
         }
       `}</style>
 
+      {/* Preparing overlay — shown while the AI generates fresh questions */}
+      {preparing && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(248,250,252,0.85)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14,
+        }}>
+          <div style={{ width: 48, height: 48, border: '5px solid #c7d2fe', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#4f46e5', margin: 0 }}>Preparing your questions… ✨</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
+
       <StudentSidebar />
 
       {/* ═══ MAIN CONTENT ═══ */}
@@ -229,7 +343,7 @@ const PracticePage = () => {
         <StudentHeader />
 
         {!category ? (
-          <div className="sp-content sp-flexrow" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '32px 40px', display: 'flex', flexDirection: 'column' }}>
+          <div className="sp-content sp-flexrow sp-scroll" style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '32px 40px', display: 'flex', flexDirection: 'column' }}>
             <button
               onClick={() => navigate(-1)}
               style={{
@@ -331,7 +445,7 @@ const PracticePage = () => {
               <span style={{ fontSize: 48 }}>{score >= 4 ? '🎉' : score >= 3 ? '👍' : '💪'}</span>
               <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1e293b', margin: '12px 0 4px' }}>Practice Complete!</h2>
               <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 20px' }}>
-                You scored <strong style={{ color: category.color }}>{score} / {category.questions.length}</strong> in {category.title}
+                You scored <strong style={{ color: category.color }}>{score} / {quizQuestions.length}</strong> in {category.title}
               </p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <button
@@ -353,22 +467,22 @@ const PracticePage = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <button onClick={backToCategories} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>← Back</button>
                 <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>
-                  {category.icon} {category.title} · Question {current + 1} of {category.questions.length}
+                  {category.icon} {category.title} · Question {current + 1} of {quizQuestions.length}
                 </span>
               </div>
 
               <div style={{ height: 6, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden', marginBottom: 20 }}>
-                <div style={{ height: '100%', borderRadius: 50, background: category.color, width: `${((current + (selected !== null ? 1 : 0)) / category.questions.length) * 100}%`, transition: 'width 0.3s' }} />
+                <div style={{ height: '100%', borderRadius: 50, background: category.color, width: `${((current + (selected !== null ? 1 : 0)) / quizQuestions.length) * 100}%`, transition: 'width 0.3s' }} />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 18px' }}>
-                <p style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0, flex: 1 }}>{category.questions[current].q}</p>
-                <SpeakButton text={category.questions[current].q} size="sm" />
+                <p style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: 0, flex: 1 }}>{quizQuestions[current].q}</p>
+                <SpeakButton text={quizQuestions[current].q} size="sm" />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {category.questions[current].options.map((opt) => {
-                  const isCorrect = opt === category.questions[current].answer;
+                {quizQuestions[current].options.map((opt) => {
+                  const isCorrect = opt === quizQuestions[current].answer;
                   const isSelected = opt === selected;
                   let bg = '#fff', border = '#e2e8f0', color = '#334155';
                   if (selected !== null) {
@@ -395,7 +509,7 @@ const PracticePage = () => {
 
               {selected !== null && (
                 <>
-                  {selected === category.questions[current].answer ? (
+                  {selected === quizQuestions[current].answer ? (
                     <div style={{ marginTop: 16, background: '#dcfce7', border: '1px solid #86efac', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span className="pp-confetti-wrap">
                         <span style={{ fontSize: 20, display: 'inline-block', animation: 'pop-bounce 0.5s ease-out' }}>🎉</span>
@@ -410,10 +524,10 @@ const PracticePage = () => {
                       <span style={{ fontSize: 20, flexShrink: 0, display: 'inline-block', animation: 'shake-x 0.5s ease-out' }}>💡</span>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 700, color: '#92400e', margin: 0 }}>
-                          Not quite — the correct answer is "{category.questions[current].answer}".
+                          Not quite — the correct answer is "{quizQuestions[current].answer}".
                         </p>
                         <p style={{ fontSize: 12, color: '#a16207', margin: '4px 0 0', lineHeight: 1.5 }}>
-                          {category.questions[current].explanation}
+                          {quizQuestions[current].explanation}
                         </p>
                       </div>
                     </div>
@@ -423,7 +537,7 @@ const PracticePage = () => {
                     onClick={next}
                     style={{ marginTop: 12, width: '100%', background: category.color, color: '#fff', fontWeight: 700, fontSize: 14, padding: '12px 0', borderRadius: 10, border: 'none', cursor: 'pointer' }}
                   >
-                    {current + 1 === category.questions.length ? 'Finish' : 'Next Question →'}
+                    {current + 1 === quizQuestions.length ? 'Finish' : 'Next Question →'}
                   </button>
                 </>
               )}

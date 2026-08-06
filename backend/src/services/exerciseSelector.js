@@ -126,6 +126,35 @@ async function getAnsweredInSession(sessionId) {
 }
 
 /**
+ * Get exercise IDs the student has already seen across PREVIOUS sessions,
+ * so retakes serve fresh questions instead of repeating old ones.
+ *
+ * Uses a rolling window (default: last 200 answered) rather than "all time"
+ * so the exercise pool never fully runs dry — once the student has cycled
+ * through the bank, the oldest questions become eligible again.
+ *
+ * @param {string} userId
+ * @param {number} recentLimit - how many recent answers to treat as "seen"
+ */
+async function getSeenHistory(userId, recentLimit = 200) {
+  try {
+    const { rows } = await query(
+      `SELECT DISTINCT pse.exercise_id
+         FROM practice_session_exercises pse
+         JOIN practice_sessions ps ON ps.id = pse.session_id
+        WHERE ps.user_id = $1
+        ORDER BY pse.exercise_id
+        LIMIT $2`,
+      [userId, recentLimit]
+    );
+    return rows.map(r => r.exercise_id);
+  } catch {
+    // If the join/columns aren't present, degrade gracefully (no history exclusion)
+    return [];
+  }
+}
+
+/**
  * Get a single next exercise adaptively based on session performance.
  * @param {string} sessionId - Current session
  * @param {string} userId - Student
@@ -134,7 +163,13 @@ async function getAnsweredInSession(sessionId) {
  * @param {object} sessionStats - { consecutiveCorrect, consecutiveWrong, totalAnswered }
  */
 async function getNextAdaptive(sessionId, userId, ldType, currentLevel, sessionStats) {
-  const excludeIds = await getAnsweredInSession(sessionId);
+  // Exclude BOTH: exercises answered in this session AND those seen in prior
+  // sessions, so a retake serves different questions than last time.
+  const [inSession, seenBefore] = await Promise.all([
+    getAnsweredInSession(sessionId),
+    getSeenHistory(userId),
+  ]);
+  const excludeIds = [...new Set([...inSession, ...seenBefore])];
 
   // Decide what type of exercise to serve based on recent performance
   const { consecutiveCorrect, consecutiveWrong, totalAnswered } = sessionStats;
@@ -179,7 +214,20 @@ async function getNextAdaptive(sessionId, userId, ldType, currentLevel, sessionS
     [Math.max(1, currentLevel - 1), Math.min(5, currentLevel + 1), excludeIds]
   );
 
-  return fallback.length > 0 ? { ...fallback[0], source: 'fallback' } : null;
+  if (fallback.length > 0) return { ...fallback[0], source: 'fallback' };
+
+  // Pool exhausted (student has seen everything). Rather than return nothing,
+  // relax the history exclusion and only avoid repeats within THIS session.
+  const { rows: relaxed } = await query(
+    `SELECT id, type, level, title, instructions, content, media_url, ld_types
+       FROM exercises
+      WHERE is_active = TRUE AND level BETWEEN $1 AND $2
+        AND id != ALL($3::uuid[])
+      ORDER BY RANDOM() LIMIT 1`,
+    [Math.max(1, currentLevel - 1), Math.min(5, currentLevel + 1), inSession]
+  );
+
+  return relaxed.length > 0 ? { ...relaxed[0], source: 'recycled' } : null;
 }
 
 module.exports = {
@@ -189,6 +237,7 @@ module.exports = {
   selectByWeakness,
   selectReview,
   getAnsweredInSession,
+  getSeenHistory,
   getNextAdaptive,
   LD_TYPE_EXERCISE_MAP,
 };

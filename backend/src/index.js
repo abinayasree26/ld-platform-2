@@ -169,8 +169,15 @@ if (env.demoMode) {
   app.use('/api/ld/push',              require('./routes/ld/push'));
   app.use('/api/ld/stt',               require('./routes/ld/stt'));
 
-  // Run migrations on startup
+  // Run migrations on startup — UNLESS explicitly skipped.
+  // Set SKIP_MIGRATIONS=true when connecting to a SHARED / production DB that is
+  // managed by a different migration system, so this backend never alters that
+  // schema (prevents crashes/conflicts on the team's Proxmox database).
   async function runStartupMigrations() {
+    if (String(process.env.SKIP_MIGRATIONS).toLowerCase() === 'true') {
+      console.log('[App] SKIP_MIGRATIONS=true — not running migrations (shared/managed DB).');
+      return;
+    }
     try {
       console.log('[App] Running migrations…');
       await runMigrations();

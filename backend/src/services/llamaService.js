@@ -213,6 +213,75 @@ async function chat({ message, history = [], studentContext = {} }) {
 
   return result || null;
 }
+// ─────────────────────────────────────────────────────────────────────
+// GENERATE PRACTICE QUESTIONS — grade & level aware, fresh every time
+// Returns an array of { q, options[4], answer, explanation } or null on failure.
+// The prompt scales difficulty to the student's grade + level so a Grade 6
+// student never gets Grade 1 questions and vice-versa.
+// ─────────────────────────────────────────────────────────────────────
+async function generatePracticeQuestions({ category, grade, age, level, ldType, count = 5 }) {
+  const g = grade || null;
+  const lvl = level || 1;
+  const gradeLine = g
+    ? `The student is in Grade ${g}${age ? ` (about ${age} years old)` : ''}. Use vocabulary, contexts, and complexity appropriate for Grade ${g}. Do NOT give questions that are too easy for this grade.`
+    : `Difficulty Level ${lvl} of 5 (1=easiest, 5=hardest).`;
+
+  const systemPrompt = `You create practice questions for children with learning disabilities on the LD Schools platform.
+
+${gradeLine}
+Skill category: ${category}.
+LD focus: ${ldType || 'general'}.
+Target difficulty: Level ${lvl} of 5.
+
+RULES:
+- Generate exactly ${count} multiple-choice questions.
+- Each question has EXACTLY 4 options, with ONE correct answer that is one of the 4 options.
+- Keep the question text short and clear (dyslexia-friendly). Instructions at a simple reading level, but the CONTENT difficulty must match the student's grade.
+- Include a one-sentence child-friendly explanation of the correct answer.
+- Vary the questions; do not repeat the same question twice.
+
+Respond ONLY with a valid JSON array, no prose:
+[
+  { "q": "...", "options": ["...","...","...","..."], "answer": "<one of the options>", "explanation": "..." }
+]`;
+
+  const result = await chatCompletion({
+    messages: [{ role: 'user', content: `Generate ${count} ${category} questions now.` }],
+    systemPrompt,
+    maxTokens: 900,
+    temperature: 0.9, // higher temperature = more variety between retakes
+  });
+
+  if (!result) return null;
+
+  // Parse the JSON array from the response
+  let parsed;
+  try {
+    parsed = JSON.parse(result);
+  } catch {
+    const match = result.match(/\[[\s\S]*\]/);
+    if (!match) return null;
+    try { parsed = JSON.parse(match[0]); } catch { return null; }
+  }
+  if (!Array.isArray(parsed)) return null;
+
+  // Validate each question: 4 options, answer present among options, has text
+  const valid = parsed.filter(q =>
+    q && typeof q.q === 'string' && q.q.trim() &&
+    Array.isArray(q.options) && q.options.length === 4 &&
+    q.options.every(o => typeof o === 'string' && o.trim()) &&
+    typeof q.answer === 'string' &&
+    q.options.map(o => o.trim().toLowerCase()).includes(q.answer.trim().toLowerCase())
+  ).map(q => ({
+    q: q.q.trim(),
+    options: q.options.map(o => o.trim()),
+    // normalize answer to the exact option string
+    answer: q.options.find(o => o.trim().toLowerCase() === q.answer.trim().toLowerCase()).trim(),
+    explanation: (q.explanation || '').trim(),
+  }));
+
+  return valid.length ? valid : null;
+}
 
 module.exports = {
   chatCompletion,
@@ -221,4 +290,5 @@ module.exports = {
   generateStudentTips,
   generateRecommendations,
   chat,
+  generatePracticeQuestions,
 };

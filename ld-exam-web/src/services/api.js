@@ -98,6 +98,8 @@ export const schoolAPI = {
 
 export const studentAPI = {
   getStudent: (id) => api.get(`/students/${id}`),
+  // Current logged-in student (real-DB endpoint)
+  getMe: () => api.get('/students/me'),
   getTestHistory: (id) => api.get(`/ld/tests/student/${id}`),
   getErrorSummary: () => api.get('/ld/practice/errors'),
 };
@@ -111,6 +113,8 @@ export const analyticsAPI = {
   classHeatmap: (classId) => api.get(`/analytics/class/${classId}/heatmap`),
   classAtRisk: (classId) => api.get(`/analytics/class/${classId}/at-risk`),
   student: (id) => api.get(`/analytics/student/${id}`),
+  // Current logged-in student's analytics (real-DB endpoint)
+  me: () => api.get('/analytics/student/me'),
   adminOverview: () => api.get('/analytics/admin/overview'),
 };
 
@@ -142,6 +146,8 @@ export const ldAPI = {
   testHistory: () => api.get('/ld/tests/history'),
   practiceHistory: () => api.get('/ld/practice/history'),
   practiceSubmit: (data) => api.post('/ld/practice/quick-submit', data),
+  // AI-generated, grade/level-aware practice questions (fresh each time)
+  practiceGenerate: (category, count = 5) => api.post('/ld/practice/generate', { category, count }),
 
   // Chat
   chat: (message, history) => api.post('/ld/chat', { message, history }),

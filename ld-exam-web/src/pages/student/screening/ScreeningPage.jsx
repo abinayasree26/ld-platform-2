@@ -31,12 +31,18 @@ const DEMO_QUESTIONS = [
 // Lightweight local scoring so the demo flow works without a backend —
 // mirrors the shape of the real /api/ld/screening/submit response.
 const computeDemoResult = (finalAnswers) => {
+  // Compute correctness here from student_answer vs correct_answer
+  // (the backend normally does this; this is only a no-backend fallback).
+  const norm = (v) => (v === null || v === undefined ? '' : String(v).trim().toLowerCase());
   const byTarget = {};
   finalAnswers.forEach((a) => {
     const t = a.ld_target || 'dyslexia';
     byTarget[t] = byTarget[t] || { wrong: 0, total: 0 };
     byTarget[t].total += 1;
-    if (!a.is_correct) byTarget[t].wrong += 1;
+    const isCorrect = a.correct_answer !== undefined
+      ? norm(a.student_answer) === norm(a.correct_answer)
+      : false;
+    if (!isCorrect) byTarget[t].wrong += 1;
   });
 
   const breakdown = {};
@@ -109,20 +115,20 @@ const StudentScreeningPage = () => {
     if (selected === null) return;
     const q = questions[current];
     const responseMs = Date.now() - questionStartRef.current;
-    const correctAnswer = q.options_json
-      ? (Array.isArray(q.options_json) ? q.options_json[0] : Object.values(q.options_json)[0])
-      : q.correct_answer || q.options_json?.[0];
 
-    const isCorrect = selected === (q.correct_answer || correctAnswer);
-
+    // NOTE: correctness is decided by the BACKEND, not here.
+    // We only capture what the student selected. This avoids the old
+    // options_json[0] bug where the first option was treated as correct.
     const answer = {
       question_id: q.id,
       category: q.category || 'reading',
       ld_target: q.ld_target || 'dyslexia',
       difficulty: q.difficulty || 1,
-      correct_answer: q.correct_answer || correctAnswer || selected,
       student_answer: selected,
-      is_correct: isCorrect,
+      // Included ONLY for the offline no-backend fallback (demo questions
+      // carry correct_answer). The real backend ignores this and scores
+      // from the database, so it is not a security concern in production.
+      correct_answer: q.correct_answer,
       response_time_ms: responseMs,
     };
 
@@ -225,8 +231,8 @@ const StudentScreeningPage = () => {
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2">
             <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">What to expect</p>
             <ul className="text-sm text-slate-600 space-y-1.5">
-              <li>• {questions.length} short questions</li>
-              <li>⏱️ About 45–60 minutes</li>
+              <li>• {questions.length} questions</li>
+              <li>⏱️ About {Math.max(5, Math.round(questions.length * 0.5))}–{Math.max(10, Math.round(questions.length * 0.75))} minutes</li>
               <li>• No right or wrong answers — just answer honestly</li>
               <li>• We'll personalise your learning plan after</li>
             </ul>

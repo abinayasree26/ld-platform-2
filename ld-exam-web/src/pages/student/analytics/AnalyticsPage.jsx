@@ -40,7 +40,8 @@ const StudentAnalyticsPage = () => {
     // Fetch real analytics to get weekDays
     const uid = user?.id || user?.user_id;
     if (uid) {
-      analyticsAPI.student(uid)
+      // Use the current-student endpoint (by-id path 404s in real mode)
+      analyticsAPI.me()
         .then(data => {
           if (data?.weekDays) setWeekActive(data.weekDays);
           if (data?.streak) setStreak(data.streak);
@@ -84,7 +85,7 @@ const StudentAnalyticsPage = () => {
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <StudentSidebar />
 
       {/* ═══ MAIN CONTENT ═══ */}
