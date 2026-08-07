@@ -159,8 +159,10 @@ const LoginPage = () => {
             grade: 'Class 5',
             ldType: 'Unscreened',
             severity: 'Pending',
+            level: 'Level 1',
             status: 'active',
             joined: new Date().toISOString().slice(0, 10),
+            lastActive: 'Today',
             subscription: 'Free Tier',
             screened: false,
           };
@@ -210,8 +212,10 @@ const LoginPage = () => {
           grade: grade ? `Class ${grade}` : 'Class 5',
           ldType: 'Unscreened',
           severity: 'Pending',
+          level: 'Level 1',
           status: 'active',
           joined: new Date().toISOString().slice(0, 10),
+          lastActive: 'Today',
           subscription: 'Free Tier',
           screened: false,
         };

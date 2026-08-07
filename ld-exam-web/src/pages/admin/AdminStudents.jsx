@@ -253,8 +253,10 @@ const AdminStudents = () => {
                 grade: 'Class 5',
                 ldType: sc.ldType ? sc.ldType.charAt(0).toUpperCase() + sc.ldType.slice(1) : 'Dyslexia',
                 severity: sc.severity || 'Moderate',
+                level: 'Level 1',
                 status: 'active',
                 joined: sc.completedAt ? sc.completedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                lastActive: 'Today',
                 subscription: 'Free Tier',
                 screened: true,
               });
@@ -664,13 +666,13 @@ const AdminStudents = () => {
                           <span className="text-[var(--text-muted)] text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 font-bold text-[var(--text-main)]">{s.level}</td>
+                      <td className="px-4 py-3 font-bold text-[var(--text-main)]">{s.level || 'Level 1'}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${SUB_BADGE[s.subscription]}`}>
-                          {s.subscription}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${SUB_BADGE[s.subscription] || 'bg-slate-100 text-slate-600'}`}>
+                          {s.subscription || 'Free Tier'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-[var(--text-muted)] text-xs">{s.lastActive}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)] text-xs">{s.lastActive || 'Today'}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button onClick={() => fetchStudentDetail(s.id)} title="View" className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition text-xs">👁️</button>
