@@ -38,23 +38,27 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminAPI.getOverview()
-      .then((resData) => {
-        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+    Promise.all([
+      adminAPI.getOverview().catch(() => ({})),
+      fetch('/api/admin/students', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+      }).then(r => r.json()).catch(() => ({}))
+    ]).then(([resData, studentsRes]) => {
+      const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+      const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
-        const uniqueStudentEmails = new Set([
-          ...customStudents.map(s => s.email).filter(Boolean),
-          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
-        ]);
+      const fetchedStudents = studentsRes?.students || [];
+      const uniqueStudentEmails = new Set([
+        ...customStudents.map(s => s.email).filter(Boolean),
+        ...customScreenings.map(sc => sc.studentEmail).filter(Boolean),
+        ...fetchedStudents.map(s => s.email).filter(Boolean)
+      ]);
 
-        const realTotalStudents = Math.max(
-          uniqueStudentEmails.size,
-          (resData?.totalStudents && resData.totalStudents > 0 ? resData.totalStudents : 0)
-        );
-        const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
-        const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
-        const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
+      const apiCount = resData?.totalStudents || fetchedStudents.length || 0;
+      const realTotalStudents = Math.max(uniqueStudentEmails.size, apiCount);
+      const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
+      const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
+      const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
 
         const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
         customScreenings.forEach(sc => {

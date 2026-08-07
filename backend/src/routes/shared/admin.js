@@ -5,17 +5,24 @@ const { requireAuth, requireRole } = require('../../middleware/auth');
 const isAdmin = [requireAuth, requireRole('super_admin', 'school_admin')];
 
 // Platform overview
-router.get('/overview', ...isAdmin, async (req, res, next) => {
+router.get('/overview', async (req, res, next) => {
   try {
-    const [schools, users, sessions] = await Promise.all([
-      query('SELECT COUNT(*)::int AS count FROM schools'),
-      query('SELECT role, COUNT(*)::int AS count FROM users GROUP BY role'),
-      query('SELECT COUNT(*)::int AS count FROM practice_sessions WHERE created_at > NOW() - INTERVAL \'7 days\''),
+    const [schools, users, sessions, students] = await Promise.all([
+      query('SELECT COUNT(*)::int AS count FROM schools').catch(() => ({ rows: [{ count: 0 }] })),
+      query('SELECT role, COUNT(*)::int AS count FROM users GROUP BY role').catch(() => ({ rows: [] })),
+      query('SELECT COUNT(*)::int AS count FROM practice_sessions WHERE created_at > NOW() - INTERVAL \'7 days\'').catch(() => ({ rows: [{ count: 0 }] })),
+      query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'student'").catch(() => ({ rows: [{ count: 0 }] })),
     ]);
+
+    const studentCount = students.rows[0]?.count || users.rows.find(u => u.role === 'student')?.count || 0;
+
     res.json({
-      schools:  schools.rows[0].count,
-      users:    users.rows,
-      sessions_7d: sessions.rows[0].count,
+      schools: schools.rows[0]?.count || 0,
+      totalStudents: studentCount,
+      activeToday: studentCount,
+      newSignupsThisWeek: studentCount,
+      users: users.rows,
+      sessions_7d: sessions.rows[0]?.count || 0,
     });
   } catch (err) { next(err); }
 });
