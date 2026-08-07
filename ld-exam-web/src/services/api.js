@@ -115,7 +115,7 @@ export const analyticsAPI = {
   student: (id) => api.get(`/analytics/student/${id}`),
   // Current logged-in student's analytics (real-DB endpoint)
   me: () => api.get('/analytics/student/me'),
-  adminOverview: () => api.get('/analytics/admin/overview'),
+  adminOverview: () => api.get('/admin/overview'),
 };
 
 export const messagesAPI = {
@@ -165,7 +165,7 @@ export const adminAPI = {
   getSchools: () => api.get('/admin/schools'),
   createSchool: (data) => api.post('/admin/schools', data),
   updateSchool: (id, data) => api.patch(`/admin/schools/${id}`, data),
-  getOverview: () => api.get('/analytics/admin/overview'),
+  getOverview: () => api.get('/admin/overview'),
   triggerCron: (job) => api.post(`/admin/cron/trigger/${job}`),
   // School detail
   getSchoolClasses: (schoolId) => api.get(`/admin/schools/${schoolId}/classes`),
