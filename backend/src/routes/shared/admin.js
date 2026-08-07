@@ -62,6 +62,42 @@ router.get('/users', ...isAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/admin/students — List student roster
+router.get('/students', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT u.id, u.name, u.email, u.created_at AS joined,
+              COALESCE(s.class_grade::text, 'Class 5') AS grade,
+              COALESCE(s.ld_type, 'Unscreened') AS "ldType",
+              COALESCE(s.severity, 'Pending') AS severity,
+              COALESCE(s.status, 'active') AS status
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       WHERE u.role = 'student'
+       ORDER BY u.created_at DESC`
+    );
+    res.json({ students: rows, total: rows.length, totalPages: 1 });
+  } catch {
+    res.json({ students: [], total: 0, totalPages: 1 });
+  }
+});
+
+// GET /api/admin/screening — List screening results
+router.get('/screening', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT sr.id, u.name AS "studentName", u.email AS "studentEmail",
+              sr.ld_type AS "ldType", sr.risk_score AS "riskScore", sr.created_at AS "completedAt"
+       FROM screening_results sr
+       JOIN users u ON u.id = sr.user_id
+       ORDER BY sr.created_at DESC`
+    );
+    res.json({ results: rows, stats: { total: rows.length, completed: rows.length, pending: 0 } });
+  } catch {
+    res.json({ results: [], stats: { total: 0, completed: 0, pending: 0 } });
+  }
+});
+
 // Export resource data as CSV stream
 router.get('/export/:resource', requireAuth, async (req, res, next) => {
   try {

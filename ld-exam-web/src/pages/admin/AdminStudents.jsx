@@ -259,7 +259,53 @@ const AdminStudents = () => {
       setTotal(list.length);
       setTotalPages(Math.max(1, Math.ceil(list.length / 10)));
     } catch {
-      toast.error('Failed to load students');
+      let list = [];
+      try {
+        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        if (customStudents.length > 0) {
+          list = [...customStudents];
+        }
+
+        if (customScreenings.length > 0) {
+          const screeningMap = new Map(customScreenings.map(sc => [sc.studentEmail, sc]));
+          if (list.length === 0) {
+            customScreenings.forEach(sc => {
+              list.push({
+                id: sc.studentId || `st-${Date.now()}`,
+                name: sc.studentName || 'Student',
+                email: sc.studentEmail,
+                grade: 'Class 5',
+                ldType: sc.ldType ? sc.ldType.charAt(0).toUpperCase() + sc.ldType.slice(1) : 'Dyslexia',
+                severity: sc.severity || 'Moderate',
+                status: 'active',
+                joined: sc.completedAt ? sc.completedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                subscription: 'Free Tier',
+                screened: true,
+              });
+            });
+          } else {
+            list = list.map(s => {
+              const sc = screeningMap.get(s.email);
+              if (sc) {
+                return {
+                  ...s,
+                  ldType: sc.ldType ? sc.ldType.charAt(0).toUpperCase() + sc.ldType.slice(1) : s.ldType,
+                  severity: sc.severity || 'Moderate',
+                  screened: true,
+                  status: 'active',
+                };
+              }
+              return s;
+            });
+          }
+        }
+      } catch { /* ignore */ }
+
+      setStudents(list);
+      setTotal(list.length);
+      setTotalPages(Math.max(1, Math.ceil(list.length / 10)));
     } finally {
       setLoading(false);
     }
