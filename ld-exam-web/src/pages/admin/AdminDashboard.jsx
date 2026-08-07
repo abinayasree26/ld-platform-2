@@ -172,17 +172,17 @@ const AdminDashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon="👥" label="Total Students" value={fmt(data?.totalStudents)} color="bg-blue-600" sub="Registered accounts" />
-          <StatCard icon="⚡" label="Active Today" value={fmt(data?.activeToday)} color="bg-emerald-600" sub="Logged in / practiced" trend={8} />
-          <StatCard icon="📝" label="New This Week" value={fmt(data?.newSignupsThisWeek)} color="bg-indigo-600" sub={`${fmt(data?.newSignupsThisMonth)} this month`} trend={15} />
-          <StatCard icon="💳" label="Revenue" value={`₹${fmt(data?.subscriptionRevenue)}`} color="bg-amber-500" sub={`${data?.activeSubscriptions} active subs`} trend={12} />
+          <StatCard icon="👥" label="Total Students" value={fmt(data?.totalStudents ?? 0)} color="bg-blue-600" sub="Registered accounts" />
+          <StatCard icon="⚡" label="Active Today" value={fmt(data?.activeToday ?? 0)} color="bg-emerald-600" sub="Logged in / practiced" trend={8} />
+          <StatCard icon="📝" label="New This Week" value={fmt(data?.newSignupsThisWeek ?? 0)} color="bg-indigo-600" sub={`${fmt(data?.newSignupsThisMonth ?? 0)} this month`} trend={15} />
+          <StatCard icon="💳" label="Revenue" value={`₹${fmt(data?.subscriptionRevenue ?? 0)}`} color="bg-amber-500" sub={`${data?.activeSubscriptions ?? 0} active subs`} trend={12} />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon="🧠" label="Screening Rate" value={`${data?.screeningCompletionRate}%`} color="bg-purple-600" sub="Completed screening" />
-          <StatCard icon="🔄" label="Conversion" value={`${data?.conversionRate}%`} color="bg-teal-600" sub="Free → Paid" trend={3} />
-          <StatCard icon="⚠️" label="At-Risk" value={fmt(data?.atRiskCount)} color="bg-red-500" sub="Need attention" />
-          <StatCard icon="🎯" label="Avg Accuracy" value={`${data?.avgAccuracy}%`} color="bg-cyan-600" sub="Practice sessions" trend={5} />
+          <StatCard icon="🧠" label="Screening Rate" value={`${data?.screeningCompletionRate ?? 0}%`} color="bg-purple-600" sub="Completed screening" />
+          <StatCard icon="🔄" label="Conversion" value={`${data?.conversionRate ?? 0}%`} color="bg-teal-600" sub="Free → Paid" trend={3} />
+          <StatCard icon="⚠️" label="At-Risk" value={fmt(data?.atRiskCount ?? 0)} color="bg-red-500" sub="Need attention" />
+          <StatCard icon="🎯" label="Avg Accuracy" value={`${data?.avgAccuracy ?? 0}%`} color="bg-cyan-600" sub="Practice sessions" trend={5} />
         </div>
 
         {/* Charts Row */}
