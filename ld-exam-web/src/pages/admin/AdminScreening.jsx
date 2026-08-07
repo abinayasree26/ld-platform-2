@@ -104,7 +104,18 @@ const AdminScreening = () => {
           list = [...newCustom, ...list];
         }
       } catch { /* ignore */ }
-      setResults(list);
+
+      const latestPerStudentMap = new Map();
+      list.forEach(item => {
+        const email = item.studentEmail || item.email || item.studentName;
+        if (!latestPerStudentMap.has(email)) {
+          latestPerStudentMap.set(email, item);
+        }
+      });
+      const uniqueList = Array.from(latestPerStudentMap.values());
+
+      setResults(uniqueList);
+      setStats({ total: uniqueList.length, completed: uniqueList.length, pending: 0 });
     } catch {
       let list = [];
       try {
@@ -113,8 +124,18 @@ const AdminScreening = () => {
           list = customSubmissions;
         }
       } catch { /* ignore */ }
-      setResults(list);
-      setStats({ total: list.length, completed: list.length, pending: 0 });
+
+      const latestPerStudentMap = new Map();
+      list.forEach(item => {
+        const email = item.studentEmail || item.email || item.studentName;
+        if (!latestPerStudentMap.has(email)) {
+          latestPerStudentMap.set(email, item);
+        }
+      });
+      const uniqueList = Array.from(latestPerStudentMap.values());
+
+      setResults(uniqueList);
+      setStats({ total: uniqueList.length, completed: uniqueList.length, pending: 0 });
     } finally {
       setLoading(false);
     }
