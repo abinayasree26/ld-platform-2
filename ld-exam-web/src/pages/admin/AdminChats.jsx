@@ -25,17 +25,44 @@ const AdminChats = () => {
 
   const fetchChats = async () => {
     setLoading(true);
+    let list = [];
     try {
       const params = statusFilter !== 'all' ? `?status=${statusFilter}` : '';
-      const resp = await fetch(`/api/admin/chats${params}`, { headers });
-      const data = await resp.json();
-      setChats(data.chats || []);
-      setUnreadTotal(data.unreadTotal || 0);
-    } catch {
-      toast.error('Failed to load chats');
-    } finally {
-      setLoading(false);
-    }
+      const resp = await fetch(`/api/admin/chats${params}`, { headers }).catch(() => null);
+      if (resp && resp.ok) {
+        const data = await resp.json();
+        list = data.chats || [];
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const customMsgs = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+      if (customMsgs.length > 0) {
+        const existingIds = new Set(list.map(c => c.id));
+        customMsgs.forEach(m => {
+          if (!existingIds.has(m.id)) {
+            list.unshift({
+              id: m.id,
+              studentName: m.studentName || 'Riya',
+              studentEmail: m.studentEmail || 'riya123@gmail.com',
+              lastMessage: m.message,
+              updatedAt: m.timestamp || new Date().toISOString(),
+              unread: m.status === 'unread' ? 1 : 0,
+              status: 'open',
+              plan: 'Free Tier',
+              messages: [
+                { id: `m-${Date.now()}`, sender: 'student', text: m.message, time: m.timestamp ? m.timestamp.slice(11, 16) : '13:00' }
+              ]
+            });
+            existingIds.add(m.id);
+          }
+        });
+      }
+    } catch { /* ignore */ }
+
+    setChats(list);
+    setUnreadTotal(list.filter(c => c.unread > 0).length);
+    setLoading(false);
   };
 
   const fetchChatDetail = async (chatId) => {

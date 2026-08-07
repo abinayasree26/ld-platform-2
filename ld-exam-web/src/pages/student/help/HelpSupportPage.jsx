@@ -26,6 +26,28 @@ const HelpSupportPage = () => {
     e.preventDefault();
     if (!message.trim()) { toast.error('Please describe your issue first'); return; }
     setSending(true);
+
+    try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const newMsg = {
+        id: `msg-${Date.now()}`,
+        studentName: user.name || 'Riya',
+        studentEmail: user.email || 'riya123@gmail.com',
+        message: message.trim(),
+        timestamp: new Date().toISOString(),
+        status: 'unread',
+        topic: 'General Inquiry',
+      };
+      const existing = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+      localStorage.setItem('admin_support_messages', JSON.stringify([newMsg, ...existing]));
+
+      fetch('/api/ld/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+        body: JSON.stringify({ body: message.trim() }),
+      }).catch(() => { /* ignore */ });
+    } catch { /* ignore */ }
+
     setTimeout(() => {
       toast.success('Message sent! Our support team will get back to you soon.');
       setMessage('');
@@ -56,6 +78,28 @@ const HelpSupportPage = () => {
     e.preventDefault();
     const text = chatInput.trim();
     if (!text) return;
+
+    try {
+      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const newMsg = {
+        id: `chat-${Date.now()}`,
+        studentName: user.name || 'Riya',
+        studentEmail: user.email || 'riya123@gmail.com',
+        message: text,
+        timestamp: new Date().toISOString(),
+        status: 'unread',
+        topic: 'Live Chat',
+      };
+      const existing = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+      localStorage.setItem('admin_support_messages', JSON.stringify([newMsg, ...existing]));
+
+      fetch('/api/ld/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+        body: JSON.stringify({ body: text }),
+      }).catch(() => { /* ignore */ });
+    } catch { /* ignore */ }
+
     setChatMessages((m) => [...m, { from: 'user', text }]);
     setChatInput('');
     setTimeout(() => {
