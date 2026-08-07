@@ -178,11 +178,6 @@ const StudentHeader = ({ showBell = true }) => {
             >
               {menuOpen ? '▲' : '▼'}
             </span>
-            {showBell && (
-              <span style={{ fontSize: 18, position: 'relative', marginLeft: 4 }}>
-                🔔<span style={{ position: 'absolute', top: -2, right: -2, width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
-              </span>
-            )}
           </div>
 
           {/* Dropdown Menu */}

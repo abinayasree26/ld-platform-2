@@ -51,30 +51,14 @@ const DEMO_PROFILE_EXTRAS = {
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { token, user, setDemoAuth } = useAuthStore();
-  const role = allowedRoles?.[0] || 'admin';
+  const { token, user } = useAuthStore();
 
-  // Support super_admin and school_admin when 'admin' role is requested
-  const effectiveAllowed = allowedRoles?.flatMap((r) =>
-    r === 'admin' ? ['admin', 'super_admin', 'school_admin'] : r
-  );
-  const wrongRole = effectiveAllowed && user?.role && !effectiveAllowed.includes(user.role);
+  const savedUser = JSON.parse(localStorage.getItem('auth_user') || 'null');
+  const savedToken = localStorage.getItem('auth_token');
 
-  useEffect(() => {
-    if (!token || wrongRole) {
-      const fallbackUser = {
-        id: 'demo-admin',
-        name: 'Demo Admin',
-        role: 'super_admin',
-        school_id: 'demo-school',
-        email: 'admin@ldschools.in',
-      };
-      setDemoAuth(fallbackUser, 'demo-token');
-      authAPI.demo('admin')
-        .then((result) => setDemoAuth({ ...fallbackUser, ...result.user }, result.token))
-        .catch(() => {});
-    }
-  }, [token, wrongRole]);
+  if ((!token && !savedToken) || (!user && !savedUser)) {
+    return <Navigate to="/login" replace />;
+  }
 
   return children;
 };
