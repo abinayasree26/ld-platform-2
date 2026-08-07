@@ -43,8 +43,19 @@ const AdminDashboard = () => {
         const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
-        const realTotalStudents = (resData?.totalStudents && resData.totalStudents > 0 ? resData.totalStudents : 0) + customStudents.length;
-        const realTotalScreened = (resData?.totalScreened && resData.totalScreened > 0 ? resData.totalScreened : 0) + customScreenings.length;
+        const uniqueStudentEmails = new Set([
+          ...customStudents.map(s => s.email).filter(Boolean),
+          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+        ]);
+
+        const realTotalStudents = Math.max(
+          uniqueStudentEmails.size,
+          (resData?.totalStudents && resData.totalStudents > 0 ? resData.totalStudents : 0)
+        );
+        const realTotalScreened = Math.max(
+          customScreenings.length,
+          (resData?.totalScreened && resData.totalScreened > 0 ? resData.totalScreened : 0)
+        );
         const screeningRate = realTotalStudents > 0 ? Math.round((realTotalScreened / realTotalStudents) * 100) : 0;
 
         const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
@@ -62,9 +73,9 @@ const AdminDashboard = () => {
 
         setData({
           totalStudents: realTotalStudents,
-          activeToday: customStudents.length,
-          newSignupsThisWeek: customStudents.length,
-          newSignupsThisMonth: customStudents.length,
+          activeToday: realTotalStudents,
+          newSignupsThisWeek: realTotalStudents,
+          newSignupsThisMonth: realTotalStudents,
           subscriptionRevenue: 0,
           activeSubscriptions: 0,
           screeningCompletionRate: screeningRate,
@@ -82,7 +93,12 @@ const AdminDashboard = () => {
         const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
-        const realTotalStudents = customStudents.length;
+        const uniqueStudentEmails = new Set([
+          ...customStudents.map(s => s.email).filter(Boolean),
+          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+        ]);
+
+        const realTotalStudents = uniqueStudentEmails.size;
         const realTotalScreened = customScreenings.length;
         const screeningRate = realTotalStudents > 0 ? Math.round((realTotalScreened / realTotalStudents) * 100) : 0;
 
@@ -101,9 +117,9 @@ const AdminDashboard = () => {
 
         setData({
           totalStudents: realTotalStudents,
-          activeToday: customStudents.length,
-          newSignupsThisWeek: customStudents.length,
-          newSignupsThisMonth: customStudents.length,
+          activeToday: realTotalStudents,
+          newSignupsThisWeek: realTotalStudents,
+          newSignupsThisMonth: realTotalStudents,
           subscriptionRevenue: 0,
           activeSubscriptions: 0,
           screeningCompletionRate: screeningRate,
