@@ -17,9 +17,16 @@ const StudentHeader = ({ showBell = true }) => {
   const { user, logout } = useAuthStore();
   const { toggle } = useSidebarStore();
   const { mode, toggleMode, fontSize, setFontSize } = useThemeStore();
-  const fullName = user?.name || 'Demo Student';
+
+  const studentUser = (user && user.role === 'student')
+    ? user
+    : (JSON.parse(localStorage.getItem('student_user_data') || 'null') || user);
+
+  const fullName = studentUser?.name && studentUser.name !== 'Administrator' && studentUser.name !== 'Admin User'
+    ? studentUser.name
+    : (studentUser?.email ? studentUser.email.split('@')[0] : 'saranya');
   const firstName = fullName.split(' ')[0];
-  const avatarLevel = currentAvatarLevel(user);
+  const avatarLevel = currentAvatarLevel(studentUser);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
@@ -45,10 +52,59 @@ const StudentHeader = ({ showBell = true }) => {
     { icon: '🆘', label: 'Help & Support', path: '/student/help' },
   ];
 
-  const notifications = [
+  const [dismissed, setDismissed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('student_dismissed_notifications') || '[]'); }
+    catch { return []; }
+  });
+
+  const [notifications, setNotifications] = useState([
     { id: 1, title: 'Screening Completed', desc: 'Your screening profile has been calculated.', time: 'Today' },
     { id: 2, title: 'Practice Level 1 Unlocked', desc: 'Keep practicing to earn your next badge!', time: '1 day ago' },
-  ];
+  ]);
+
+  const loadAnnouncements = () => {
+    try {
+      const customAnnouncements = JSON.parse(localStorage.getItem('admin_created_notifications') || '[]');
+      const defaultNotes = [
+        { id: 1, title: 'Screening Completed', desc: 'Your screening profile has been calculated.', time: 'Today' },
+        { id: 2, title: 'Practice Level 1 Unlocked', desc: 'Keep practicing to earn your next badge!', time: '1 day ago' },
+      ];
+      if (customAnnouncements.length > 0) {
+        const formatted = customAnnouncements.map((a, idx) => ({
+          id: a.id || `ann-${idx}`,
+          title: `📢 ${a.title}`,
+          desc: a.body || a.desc || 'New Announcement',
+          time: a.sentAt ? new Date(a.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+          isAnnouncement: true
+        }));
+        setNotifications([...formatted, ...defaultNotes]);
+      } else {
+        setNotifications(defaultNotes);
+      }
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    loadAnnouncements();
+    const interval = setInterval(loadAnnouncements, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const dismissNotification = (id, e) => {
+    e.stopPropagation();
+    const updated = [...dismissed, String(id)];
+    setDismissed(updated);
+    try { localStorage.setItem('student_dismissed_notifications', JSON.stringify(updated)); } catch {}
+  };
+
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => String(n.id));
+    const updated = Array.from(new Set([...dismissed, ...allIds]));
+    setDismissed(updated);
+    try { localStorage.setItem('student_dismissed_notifications', JSON.stringify(updated)); } catch {}
+  };
+
+  const activeNotifications = notifications.filter(n => !dismissed.includes(String(n.id)));
 
   const iconBtnStyle = {
     background: 'none', border: '1px solid #e2e8f0', borderRadius: 10,
@@ -78,7 +134,9 @@ const StudentHeader = ({ showBell = true }) => {
               style={{ ...iconBtnStyle, position: 'relative', background: notifMenuOpen ? '#e0e7ff' : (mode === 'dark' ? '#334155' : '#f8fafc'), color: mode === 'dark' ? '#fbbf24' : '#64748b' }}
             >
               🔔
-              <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
+              {activeNotifications.length > 0 && (
+                <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
+              )}
             </button>
 
             {/* Notification Dropdown Menu */}
@@ -91,15 +149,36 @@ const StudentHeader = ({ showBell = true }) => {
               }}>
                 <div style={{ padding: '0 16px 8px', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#f1f5f9'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 800, color: mode === 'dark' ? '#f1f5f9' : '#1e293b' }}>Notifications</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#4f46e5', background: '#e0e7ff', padding: '2px 6px', borderRadius: 6 }}>2 New</span>
+                  {activeNotifications.length > 0 ? (
+                    <button onClick={markAllAsRead} style={{ fontSize: 10, fontWeight: 700, color: '#4f46e5', background: '#e0e7ff', border: 'none', padding: '3px 8px', borderRadius: 6, cursor: 'pointer' }}>
+                      Mark all read ({activeNotifications.length})
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', background: '#d1fae5', padding: '2px 6px', borderRadius: 6 }}>All Read</span>
+                  )}
                 </div>
-                {notifications.map(n => (
-                  <div key={n.id} style={{ padding: '10px 16px', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#f8fafc'}` }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: mode === 'dark' ? '#f1f5f9' : '#1e293b', margin: 0 }}>{n.title}</p>
-                    <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 0' }}>{n.desc}</p>
-                    <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{n.time}</span>
+                {activeNotifications.length === 0 ? (
+                  <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 20, margin: '0 0 4px' }}>🎉</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: mode === 'dark' ? '#cbd5e1' : '#64748b', margin: 0 }}>All caught up!</p>
+                    <p style={{ fontSize: 10, color: '#94a3b8', margin: '2px 0 0' }}>No new notifications</p>
                   </div>
-                ))}
+                ) : (
+                  activeNotifications.map(n => (
+                    <div key={n.id} style={{ position: 'relative', padding: '10px 16px', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#f8fafc'}`, background: n.isAnnouncement ? (mode === 'dark' ? '#312e81' : '#f5f3ff') : 'transparent' }}>
+                      <button
+                        onClick={(e) => dismissNotification(n.id, e)}
+                        title="Dismiss"
+                        style={{ position: 'absolute', top: 10, right: 12, background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                      >
+                        ✕
+                      </button>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: mode === 'dark' ? '#f1f5f9' : '#1e293b', margin: 0, paddingRight: 16 }}>{n.title}</p>
+                      <p style={{ fontSize: 11, color: mode === 'dark' ? '#cbd5e1' : '#64748b', margin: '2px 0 0' }}>{n.desc}</p>
+                      <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{n.time}</span>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>

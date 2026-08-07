@@ -53,7 +53,7 @@ const DEMO_PROFILE_EXTRAS = {
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { token, user } = useAuthStore();
 
-  const savedUser = JSON.parse(localStorage.getItem('auth_user') || 'null');
+  const savedUser = JSON.parse(localStorage.getItem('user_data') || localStorage.getItem('auth_user') || 'null');
   const savedToken = localStorage.getItem('auth_token');
 
   if ((!token && !savedToken) || (!user && !savedUser)) {

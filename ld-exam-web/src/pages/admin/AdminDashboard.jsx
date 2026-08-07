@@ -41,12 +41,15 @@ const AdminDashboard = () => {
     adminAPI.getOverview()
       .then((res) => {
         const overviewObj = res?.data || res || {};
-        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
+        const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         const uniqueStudentEmails = new Set([
-          ...customStudents.map(s => s.email).filter(Boolean),
-          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+          ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
+          ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
 
         let apiStudentCount = 0;
@@ -57,7 +60,7 @@ const AdminDashboard = () => {
           if (st) apiStudentCount = Number(st.count) || 0;
         }
 
-        const realTotalStudents = Math.max(uniqueStudentEmails.size, apiStudentCount, customStudents.length, customScreenings.length > 0 ? 1 : 0);
+        const realTotalStudents = Math.max(uniqueStudentEmails.size, customStudents.length, customScreenings.length > 0 ? 1 : 0);
         const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
         const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
         const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
@@ -94,12 +97,15 @@ const AdminDashboard = () => {
         });
       })
       .catch(() => {
-        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
+        const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         const uniqueStudentEmails = new Set([
-          ...customStudents.map(s => s.email).filter(Boolean),
-          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+          ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
+          ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
 
         const realTotalStudents = Math.max(uniqueStudentEmails.size, customStudents.length, customScreenings.length > 0 ? 1 : 0);

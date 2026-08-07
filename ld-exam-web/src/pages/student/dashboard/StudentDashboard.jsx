@@ -104,8 +104,17 @@ const StudentDashboardWeb = () => {
     );
   }
 
-  const firstName = profile?.name?.split(' ')[0] || user?.name?.split(' ')[0] || 'Student';
-  const avatarLevel = currentAvatarLevel(user);
+  const studentUser = (user && user.role === 'student')
+    ? user
+    : (JSON.parse(localStorage.getItem('student_user_data') || 'null') || user);
+
+  const rawName = profile?.name || studentUser?.name;
+  const fullName = (rawName && rawName !== 'Administrator' && rawName !== 'Admin User' && rawName !== 'Admin')
+    ? rawName
+    : (studentUser?.email ? studentUser.email.split('@')[0] : 'saranya');
+
+  const firstName = fullName.split(' ')[0];
+  const avatarLevel = currentAvatarLevel(studentUser);
   const level = profile?.current_level ?? 3;
   const streak = analytics?.streak || profile?.streak_count || 0;
   const practiceHours = Math.floor(totalMinutes / 60);

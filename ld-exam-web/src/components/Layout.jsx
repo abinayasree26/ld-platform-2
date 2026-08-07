@@ -27,9 +27,10 @@ const FONT_OPTIONS = [
 ];
 
 const Layout = ({ children }) => {
+  const location = useLocation();
   const { user, logout } = useAuthStore();
   const { isDark, toggleTheme, initTheme } = useThemeStore();
-  const isAdmin = ['admin', 'super_admin', 'school_admin'].includes(user?.role);
+  const isAdmin = location.pathname.startsWith('/admin') || ['admin', 'super_admin', 'school_admin'].includes(user?.role);
   const nav = isAdmin ? NAV_ADMIN : NAV_TEACHER;
   const [fontIdx, setFontIdx] = useState(1);
   const [fontDropdown, setFontDropdown] = useState(false);

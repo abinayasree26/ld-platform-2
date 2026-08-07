@@ -172,11 +172,23 @@ const StudentScreeningPage = () => {
     }
 
     try {
+      const studentUser = (user && user.role === 'student')
+        ? user
+        : (JSON.parse(localStorage.getItem('student_user_data') || 'null') || user);
+
+      const sName = (studentUser?.name && studentUser.name !== 'Administrator' && studentUser.name !== 'Admin User' && studentUser.name !== 'Admin')
+        ? studentUser.name
+        : (studentUser?.email ? studentUser.email.split('@')[0] : 'saranya');
+
+      const sEmail = (studentUser?.email && !studentUser.email.includes('admin'))
+        ? studentUser.email
+        : 'saranya@gmail.com';
+
       const newSubmission = {
         id: `sr-${Date.now()}`,
-        studentId: user?.id || 'st-demo',
-        studentName: user?.name || 'Demo Student',
-        studentEmail: user?.email || 'student@gmail.com',
+        studentId: studentUser?.id || 'st-demo',
+        studentName: sName,
+        studentEmail: sEmail,
         ldType: finalResultData?.ldType || 'dyslexia',
         severity: finalResultData?.severity || 'Moderate',
         riskScore: finalResultData?.riskScore || 45,
@@ -185,7 +197,8 @@ const StudentScreeningPage = () => {
         breakdown: finalResultData?.breakdown || { dyslexia: 55, dysgraphia: 40, dyscalculia: 30 },
       };
       const stored = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
-      localStorage.setItem('admin_custom_screening_results', JSON.stringify([newSubmission, ...stored]));
+      const filteredStored = stored.filter(s => s.studentName !== 'Administrator' && s.studentEmail !== 'student@gmail.com');
+      localStorage.setItem('admin_custom_screening_results', JSON.stringify([newSubmission, ...filteredStored]));
     } catch { /* ignore */ }
   };
 

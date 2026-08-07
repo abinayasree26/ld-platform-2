@@ -97,13 +97,16 @@ const AdminScreening = () => {
       const data = await resp.json();
       let list = data.results || [];
       try {
-        const customSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const rawSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const customSubmissions = rawSubmissions.filter(s => s.studentName !== 'Administrator' && s.studentName !== 'Admin User' && s.studentEmail !== 'student@gmail.com');
         if (customSubmissions.length > 0) {
           const existingIds = new Set(list.map(r => r.id));
           const newCustom = customSubmissions.filter(s => !existingIds.has(s.id));
           list = [...newCustom, ...list];
         }
       } catch { /* ignore */ }
+
+      list = list.filter(item => item.studentName !== 'Administrator' && item.studentName !== 'Admin User' && item.studentEmail !== 'student@gmail.com');
 
       const latestPerStudentMap = new Map();
       list.forEach(item => {
@@ -119,10 +122,8 @@ const AdminScreening = () => {
     } catch {
       let list = [];
       try {
-        const customSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
-        if (customSubmissions.length > 0) {
-          list = customSubmissions;
-        }
+        const rawSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        list = rawSubmissions.filter(s => s.studentName !== 'Administrator' && s.studentName !== 'Admin User' && s.studentEmail !== 'student@gmail.com');
       } catch { /* ignore */ }
 
       const latestPerStudentMap = new Map();

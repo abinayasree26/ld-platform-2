@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useSidebarStore from '../../../services/sidebarStore';
+import useAuthStore from '../../../services/authStore';
 import StudentSidebar from '../../../components/StudentSidebar';
 import StudentHeader from '../../../components/StudentHeader';
 import AboutIcon from '../../../components/AboutIcon';
@@ -19,8 +20,30 @@ const FAQS = [
 const HelpSupportPage = () => {
   const navigate = useNavigate();
   const { collapsed } = useSidebarStore();
+  const { user: authUser } = useAuthStore();
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+
+  const getStudentInfo = () => {
+    const studentData = JSON.parse(localStorage.getItem('student_user_data') || 'null');
+    const authData = JSON.parse(localStorage.getItem('user_data') || 'null');
+    const user = (authUser && authUser.role === 'student')
+      ? authUser
+      : (studentData || (authData?.role === 'student' ? authData : null));
+
+    let name = user?.name || studentData?.name;
+    if (!name || name === 'Administrator' || name === 'Admin User' || name === 'Admin') {
+      const fallbackEmail = user?.email || studentData?.email;
+      name = fallbackEmail ? fallbackEmail.split('@')[0] : 'Student';
+    }
+
+    let email = user?.email || studentData?.email;
+    if (!email || email.includes('admin')) {
+      email = `${name.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
+    }
+
+    return { name, email };
+  };
 
   const submitMessage = (e) => {
     e.preventDefault();
@@ -28,11 +51,11 @@ const HelpSupportPage = () => {
     setSending(true);
 
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const studentInfo = getStudentInfo();
       const newMsg = {
         id: `msg-${Date.now()}`,
-        studentName: user.name || 'Riya',
-        studentEmail: user.email || 'riya123@gmail.com',
+        studentName: studentInfo.name,
+        studentEmail: studentInfo.email,
         message: message.trim(),
         timestamp: new Date().toISOString(),
         status: 'unread',
@@ -56,35 +79,84 @@ const HelpSupportPage = () => {
   };
 
   // Live Chat — quick-reply FAQ chips, with a trailing "Other" option for anything not listed.
-  const [chatMessages, setChatMessages] = useState([
-    { from: 'bot', text: "Hi! I'm your live chat assistant 🤖 Pick a question below, or type your own." },
-  ]);
+  const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
+
+  const loadChatHistory = () => {
+    const studentInfo = getStudentInfo();
+    const emailKey = (studentInfo.email || '').toLowerCase();
+    const nameKey = (studentInfo.name || '').toLowerCase();
+
+    // 1. Get sent messages strictly for this specific student from admin_support_messages
+    const allSent = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+    const studentSent = allSent.filter(m =>
+      (m.studentEmail && m.studentEmail.toLowerCase() === emailKey) ||
+      (m.studentName && m.studentName.toLowerCase() === nameKey)
+    );
+
+    // 2. Get admin replies strictly for this specific student from admin_support_replies
+    const allReplies = JSON.parse(localStorage.getItem('admin_support_replies') || '[]');
+    const studentReplies = allReplies.filter(r =>
+      (r.studentEmail && r.studentEmail.toLowerCase() === emailKey) ||
+      (r.studentName && r.studentName.toLowerCase() === nameKey) ||
+      r.chatId === `chat-${emailKey}`
+    );
+
+    // 3. Combine into unified list sorted by timestamp
+    const items = [
+      ...studentSent.map(s => ({
+        id: s.id,
+        from: 'user',
+        text: s.message,
+        timestamp: s.timestamp || '2026-01-01T00:00:00.000Z'
+      })),
+      ...studentReplies.map(r => ({
+        id: r.id || `rep-${r.time}`,
+        from: 'admin',
+        text: r.text,
+        timestamp: r.time || r.timestamp || '2026-01-01T00:00:00.000Z'
+      }))
+    ];
+
+    items.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    const initialGreeting = {
+      id: 'bot-welcome',
+      from: 'bot',
+      text: "Hi! I'm your live chat assistant 🤖 Pick a question below, or type your own.",
+      timestamp: '2020-01-01T00:00:00.000Z'
+    };
+
+    setChatMessages([initialGreeting, ...items]);
+  };
+
+  useEffect(() => {
+    loadChatHistory();
+    const interval = setInterval(loadChatHistory, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [chatMessages]);
 
   const askFaq = (f) => {
-    setChatMessages((m) => [...m, { from: 'user', text: f.q }, { from: 'bot', text: f.a }]);
+    sendChatMessageText(f.q);
   };
 
   const askOther = () => {
-    setChatMessages((m) => [...m, { from: 'user', text: 'Other' }, { from: 'bot', text: "No problem — type your question below and I'll pass it on to our support team." }]);
+    sendChatMessageText('Other');
   };
 
-  const sendChatMessage = (e) => {
-    e.preventDefault();
-    const text = chatInput.trim();
+  const sendChatMessageText = (text) => {
     if (!text) return;
-
     try {
-      const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+      const studentInfo = getStudentInfo();
       const newMsg = {
         id: `chat-${Date.now()}`,
-        studentName: user.name || 'Riya',
-        studentEmail: user.email || 'riya123@gmail.com',
+        studentName: studentInfo.name,
+        studentEmail: studentInfo.email,
         message: text,
         timestamp: new Date().toISOString(),
         status: 'unread',
@@ -100,11 +172,15 @@ const HelpSupportPage = () => {
       }).catch(() => { /* ignore */ });
     } catch { /* ignore */ }
 
-    setChatMessages((m) => [...m, { from: 'user', text }]);
+    loadChatHistory();
+  };
+
+  const sendChatMessage = (e) => {
+    e.preventDefault();
+    const text = chatInput.trim();
+    if (!text) return;
+    sendChatMessageText(text);
     setChatInput('');
-    setTimeout(() => {
-      setChatMessages((m) => [...m, { from: 'bot', text: "Thanks! I've noted your question — our support team will follow up by email shortly." }]);
-    }, 500);
   };
 
   return (
@@ -133,47 +209,43 @@ const HelpSupportPage = () => {
           </h2>
           <p style={{ flexShrink: 0, fontSize: 12, color: '#94a3b8', margin: '0 0 20px' }}>Answers to common questions, or reach out to us directly.</p>
 
-          {/* ═══ TWO CONTAINERS: Contact info + form vs. Live Chat ═══ */}
+          {/* ═══ TWO CONTAINERS: Contact info vs. Live Chat ═══ */}
           <div className="sp-grid-2 sp-flexrow" style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 24 }}>
 
-          {/* ═══ LEFT ═══ */}
-          <div className="sp-hide-scrollbar" style={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {/* ═══ LEFT: Support Channels & Guidance ═══ */}
+          <div className="sp-hide-scrollbar" style={{ minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Contact card */}
-          <div className="sp-flex-stack" style={{ ...card, marginBottom: 20, display: 'flex', gap: 12 }}>
+          <div className="sp-flex-stack" style={{ ...card, display: 'flex', gap: 12 }}>
             {[
               { icon: '✉️', label: 'Email', value: 'support@ldsupport.in' },
               { icon: '📞', label: 'Phone', value: '+91 1800 123 4567' },
               { icon: '💬', label: 'Live Chat', value: 'Mon–Sat, 9am–6pm' },
             ].map((c) => (
-              <div key={c.label} style={{ flex: 1, textAlign: 'center', padding: '10px 8px', borderRadius: 10, background: '#f8fafc' }}>
-                <span style={{ fontSize: 20 }}>{c.icon}</span>
+              <div key={c.label} style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRadius: 10, background: '#f8fafc' }}>
+                <span style={{ fontSize: 22 }}>{c.icon}</span>
                 <p style={{ fontSize: 11, color: '#94a3b8', margin: '6px 0 0', fontWeight: 600, textTransform: 'uppercase' }}>{c.label}</p>
                 <p style={{ fontSize: 12, color: '#334155', margin: '2px 0 0', fontWeight: 600 }}>{c.value}</p>
               </div>
             ))}
           </div>
 
-          {/* Contact form */}
+          {/* Support Info Card */}
           <div style={card}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: '0 0 4px' }}>Still need help?</h3>
-            <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 14px' }}>Send us a message and we'll get back to you.</p>
-            <form onSubmit={submitMessage}>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your issue or question…"
-                rows={4}
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13, border: '2px solid #e2e8f0', borderRadius: 10, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' }}
-              />
-              <button
-                type="submit"
-                disabled={sending}
-                style={{ marginTop: 10, background: '#4f46e5', color: '#fff', fontWeight: 700, fontSize: 13, padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', opacity: sending ? 0.6 : 1 }}
-              >
-                {sending ? 'Sending…' : 'Send Message'}
-              </button>
-            </form>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#334155', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>ℹ️</span> Support Center Guidance
+            </h3>
+            <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.6, margin: '0 0 14px' }}>
+              Our dedicated support team is available to assist students with screening assessments, practice modules, and platform inquiries.
+            </p>
+            <div style={{ background: '#eef2ff', padding: 14, borderRadius: 12, border: '1px solid #e0e7ff' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#3730a3', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>⚡</span> Real-Time Live Assistance
+              </p>
+              <p style={{ fontSize: 11.5, color: '#4338ca', margin: 0, lineHeight: 1.5 }}>
+                Use the <strong>Live Chat</strong> window on the right to chat directly with our support administrators in real-time.
+              </p>
+            </div>
           </div>
 
           </div>
@@ -187,21 +259,26 @@ const HelpSupportPage = () => {
 
             {/* Message thread */}
             <div className="sp-hide-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {chatMessages.map((m, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: m.from === 'bot' ? 'flex-start' : 'flex-end' }}>
-                  <div
-                    style={{
-                      maxWidth: '85%', padding: '9px 13px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.5,
-                      background: m.from === 'bot' ? '#f1f5f9' : '#4f46e5',
-                      color: m.from === 'bot' ? '#334155' : '#fff',
-                      borderBottomLeftRadius: m.from === 'bot' ? 4 : 14,
-                      borderBottomRightRadius: m.from === 'bot' ? 14 : 4,
-                    }}
-                  >
-                    {m.text}
+              {chatMessages.map((m, i) => {
+                const isLeft = m.from === 'bot' || m.from === 'admin';
+                const isAdmin = m.from === 'admin';
+                return (
+                  <div key={m.id || i} style={{ display: 'flex', justifyContent: isLeft ? 'flex-start' : 'flex-end' }}>
+                    <div
+                      style={{
+                        maxWidth: '85%', padding: '9px 13px', borderRadius: 14, fontSize: 12.5, lineHeight: 1.5,
+                        background: m.from === 'bot' ? '#f1f5f9' : isAdmin ? '#2563eb' : '#4f46e5',
+                        color: m.from === 'bot' ? '#334155' : '#fff',
+                        borderBottomLeftRadius: isLeft ? 4 : 14,
+                        borderBottomRightRadius: isLeft ? 14 : 4,
+                      }}
+                    >
+                      {isAdmin && <div style={{ fontSize: 10, fontWeight: 800, opacity: 0.9, marginBottom: 2 }}>👨‍💼 Admin Support</div>}
+                      {m.text}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={chatEndRef} />
             </div>
 

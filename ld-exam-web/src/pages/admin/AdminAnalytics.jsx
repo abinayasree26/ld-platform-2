@@ -28,15 +28,18 @@ const AdminAnalytics = () => {
     fetch('/api/admin/analytics', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(resData => {
-        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
+        const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         const uniqueStudentEmails = new Set([
-          ...customStudents.map(s => s.email).filter(Boolean),
-          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+          ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
+          ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
-        const totalCount = Math.max(uniqueStudentEmails.size, resData?.overview?.totalStudents || 0);
-        const screenedCount = Math.max(customScreenings.length, resData?.overview?.screenedStudents || 0);
+        const totalCount = uniqueStudentEmails.size > 0 ? uniqueStudentEmails.size : 1;
+        const screenedCount = customScreenings.length;
 
         setData({
           overview: {
@@ -58,14 +61,17 @@ const AdminAnalytics = () => {
         });
       })
       .catch(() => {
-        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
+        const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         const uniqueStudentEmails = new Set([
-          ...customStudents.map(s => s.email).filter(Boolean),
-          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+          ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
+          ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
-        const totalCount = uniqueStudentEmails.size;
+        const totalCount = uniqueStudentEmails.size > 0 ? uniqueStudentEmails.size : 1;
         const screenedCount = customScreenings.length;
 
         setData({

@@ -36,27 +36,107 @@ const AdminChats = () => {
     } catch { /* ignore */ }
 
     try {
-      const customMsgs = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+      const rawCustomMsgs = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+      const customMsgs = rawCustomMsgs.map(m => {
+        if (!m.studentName || m.studentName === 'Administrator' || m.studentName === 'Admin User' || m.studentName === 'Admin' || m.studentName === 'Riya') {
+          return { ...m, studentName: 'saranya', studentEmail: 'saranya@gmail.com' };
+        }
+        return m;
+      });
       const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
 
       if (customMsgs.length > 0) {
-        const existingIds = new Set(list.map(c => c.id));
-        customMsgs.forEach(m => {
-          if (!existingIds.has(m.id)) {
-            list.unshift({
-              id: m.id,
-              studentName: m.studentName || 'Riya',
-              studentEmail: m.studentEmail || 'riya123@gmail.com',
+        const chatsByStudent = new Map();
+
+        // Process customMsgs chronologically (oldest first so newest ends up as lastMessage)
+        const sortedMsgs = [...customMsgs].reverse();
+
+        sortedMsgs.forEach((m, idx) => {
+          let studentName = m.studentName;
+          if (!studentName || studentName === 'Administrator' || studentName === 'Admin User' || studentName === 'Admin' || studentName === 'Riya') {
+            studentName = 'saranya';
+          }
+          let studentEmail = m.studentEmail;
+          if (!studentEmail || studentEmail.includes('admin') || studentEmail.includes('riya')) {
+            studentEmail = 'saranya@gmail.com';
+          }
+
+          const key = studentEmail.toLowerCase();
+          const time = m.timestamp || new Date().toISOString();
+          const msgObj = {
+            id: m.id || `m-${Date.now()}-${idx}`,
+            sender: 'student',
+            from: 'student',
+            text: m.message,
+            time: time,
+          };
+
+          if (!chatsByStudent.has(key)) {
+            chatsByStudent.set(key, {
+              id: `chat-${key}`,
+              studentName: studentName,
+              studentEmail: studentEmail,
               lastMessage: m.message,
-              updatedAt: m.timestamp || new Date().toISOString(),
+              updatedAt: time,
               unread: m.status === 'unread' ? 1 : 0,
               status: 'open',
               plan: 'Free Tier',
-              messages: [
-                { id: `m-${Date.now()}`, sender: 'student', text: m.message, time: m.timestamp ? m.timestamp.slice(11, 16) : '13:00' }
-              ]
+              messages: [msgObj],
             });
-            existingIds.add(m.id);
+          } else {
+            const existingChat = chatsByStudent.get(key);
+            existingChat.studentName = studentName;
+            existingChat.messages.push(msgObj);
+            existingChat.lastMessage = m.message;
+            existingChat.updatedAt = time;
+            if (m.status === 'unread') existingChat.unread += 1;
+          }
+        });
+
+        // Merge saved admin replies into student chat threads
+        const savedReplies = JSON.parse(localStorage.getItem('admin_support_replies') || '[]');
+        savedReplies.forEach((r, idx) => {
+          let rEmail = (r.studentEmail || 'saranya@gmail.com').toLowerCase();
+          if (rEmail.includes('admin')) rEmail = 'saranya@gmail.com';
+          const rTime = r.time || r.timestamp || new Date().toISOString();
+          const replyObj = {
+            id: r.id || `rep-${rTime}-${idx}`,
+            sender: 'admin',
+            from: 'admin',
+            text: r.text,
+            time: rTime,
+          };
+
+          const chat = chatsByStudent.get(rEmail);
+          if (chat) {
+            chat.messages.push(replyObj);
+            chat.lastMessage = r.text;
+            chat.updatedAt = rTime;
+          } else {
+            chatsByStudent.set(rEmail, {
+              id: `chat-${rEmail}`,
+              studentName: r.studentName || 'saranya',
+              studentEmail: rEmail,
+              lastMessage: r.text,
+              updatedAt: rTime,
+              unread: 0,
+              status: 'open',
+              plan: 'Free Tier',
+              messages: [replyObj],
+            });
+          }
+        });
+
+        // Sort messages chronologically in each thread so student messages and admin replies interleave correctly
+        chatsByStudent.forEach(chat => {
+          chat.messages.sort((a, b) => new Date(a.time) - new Date(b.time));
+        });
+
+        const existingIds = new Set(list.map(c => c.id));
+        chatsByStudent.forEach((groupedChat) => {
+          if (!existingIds.has(groupedChat.id)) {
+            list.unshift(groupedChat);
+            existingIds.add(groupedChat.id);
           }
         });
       }
@@ -73,7 +153,7 @@ const AdminChats = () => {
             status: 'open',
             plan: st.subscription || 'Free Tier',
             messages: [
-              { id: `m-${Date.now()}`, sender: 'student', text: 'Hi! I have a question about my practice level.', time: '12:30' }
+              { id: `m-${Date.now()}`, sender: 'student', text: 'Hi! I have a question about my practice level.', time: new Date().toISOString() }
             ]
           });
         });
@@ -83,6 +163,10 @@ const AdminChats = () => {
     setChats(list);
     setUnreadTotal(list.filter(c => c.unread > 0).length);
     setLoading(false);
+    if (list.length > 0 && !selectedChat) {
+      setSelectedChat(list[0].id);
+      setChatDetail(list[0]);
+    }
   };
 
   const fetchChatDetail = async (chatId) => {
@@ -107,7 +191,8 @@ const AdminChats = () => {
   const sendReply = async () => {
     if (!reply.trim() || !selectedChat) return;
     setSending(true);
-    const newMsg = { id: `m-${Date.now()}`, sender: 'admin', text: reply.trim(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    const timeIso = new Date().toISOString();
+    const newMsg = { id: `m-${Date.now()}`, sender: 'admin', from: 'admin', text: reply.trim(), time: timeIso };
 
     try {
       await fetch(`/api/admin/chats/${selectedChat}/reply`, {
@@ -117,10 +202,23 @@ const AdminChats = () => {
       setChatDetail(prev => ({ ...prev, messages: [...(prev?.messages || []), newMsg] }));
       setChats(prev => prev.map(c => c.id === selectedChat ? { ...c, lastMessage: reply.trim(), unread: 0 } : c));
 
-      // Persist reply to localStorage
+      // Persist reply to localStorage for Student Portal Live Chat
       try {
         const savedReplies = JSON.parse(localStorage.getItem('admin_support_replies') || '[]');
-        localStorage.setItem('admin_support_replies', JSON.stringify([...savedReplies, { chatId: selectedChat, text: reply.trim(), time: new Date().toISOString() }]));
+        const studentEmail = chatDetail?.studentEmail || 'saranya@gmail.com';
+        localStorage.setItem('admin_support_replies', JSON.stringify([
+          ...savedReplies,
+          {
+            id: `rep-${Date.now()}`,
+            chatId: selectedChat,
+            studentEmail: studentEmail,
+            studentName: chatDetail?.studentName || 'saranya',
+            text: reply.trim(),
+            time: timeIso,
+            sender: 'admin',
+            from: 'admin'
+          }
+        ]));
       } catch { /* ignore */ }
 
       setReply('');
@@ -158,11 +256,14 @@ const AdminChats = () => {
 
   const formatTime = (iso) => {
     if (!iso) return '';
+    if (typeof iso === 'string' && /^\d{1,2}:\d{2}$/.test(iso)) return iso;
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
     const today = new Date().toISOString().slice(0, 10);
-    const dateStr = iso.slice(0, 10);
-    if (dateStr === today) return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    return `${dateStr} ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+    const dateStr = typeof iso === 'string' ? iso.slice(0, 10) : '';
+    const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    if (dateStr === today) return timeStr;
+    return `${dateStr} ${timeStr}`;
   };
 
   return (
@@ -275,20 +376,23 @@ const AdminChats = () => {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[var(--bg-main)]">
-                {chatDetail.messages?.map(msg => (
-                  <div key={msg.id} className={`flex ${msg.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
-                      msg.from === 'admin'
-                        ? 'bg-purple-600 text-white rounded-br-md'
-                        : 'bg-[var(--bg-card)] border border-[var(--border-main)] text-[var(--text-main)] rounded-bl-md'
-                    }`}>
-                      <p className="text-sm">{msg.text}</p>
-                      <p className={`text-[9px] mt-1 ${msg.from === 'admin' ? 'text-purple-200' : 'text-[var(--text-muted)]'}`}>
-                        {formatTime(msg.time)}
-                      </p>
+                {chatDetail.messages?.map(msg => {
+                  const isAdmin = msg.sender === 'admin' || msg.from === 'admin';
+                  return (
+                    <div key={msg.id} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                        isAdmin
+                          ? 'bg-purple-600 text-white rounded-br-md'
+                          : 'bg-[var(--bg-card)] border border-[var(--border-main)] text-[var(--text-main)] rounded-bl-md'
+                      }`}>
+                        <p className="text-sm">{msg.text}</p>
+                        <p className={`text-[9px] mt-1 ${isAdmin ? 'text-purple-200' : 'text-[var(--text-muted)]'}`}>
+                          {formatTime(msg.time)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
 

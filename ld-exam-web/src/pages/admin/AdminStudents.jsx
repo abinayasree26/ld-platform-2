@@ -228,8 +228,11 @@ const AdminStudents = () => {
       const data = await resp.json();
       let list = data.students || [];
       try {
-        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+        const rawCustomStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const rawCustomScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+
+        const customStudents = rawCustomStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
+        const customScreenings = rawCustomScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         if (customStudents.length > 0) {
           const existingEmails = new Set(list.map(s => s.email));
@@ -274,6 +277,9 @@ const AdminStudents = () => {
           });
         }
       } catch { /* ignore */ }
+
+      // Final strict filter: Never show Administrator or fake demo student entries in Student Management
+      list = list.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
 
       setStudents(list);
       setTotal(list.length);

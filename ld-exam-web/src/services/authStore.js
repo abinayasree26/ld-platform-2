@@ -18,6 +18,9 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('auth_token', result.token);
     if (result.refreshToken) localStorage.setItem('refresh_token', result.refreshToken);
     localStorage.setItem('user_data', JSON.stringify(result.user));
+    if (result.user?.role === 'student') {
+      localStorage.setItem('student_user_data', JSON.stringify(result.user));
+    }
     clearLocalProgress();
     set({ token: result.token, user: result.user });
     identifyUser(result.user);
@@ -30,6 +33,9 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('auth_token', result.token);
     localStorage.removeItem('refresh_token'); // demo sessions don't use refresh
     localStorage.setItem('user_data', JSON.stringify(result.user));
+    if (result.user?.role === 'student') {
+      localStorage.setItem('student_user_data', JSON.stringify(result.user));
+    }
     clearLocalProgress();
     set({ token: result.token, user: result.user });
     identifyUser(result.user);
@@ -40,6 +46,9 @@ const useAuthStore = create((set) => ({
     localStorage.setItem('auth_token', token);
     localStorage.removeItem('refresh_token');
     localStorage.setItem('user_data', JSON.stringify(user));
+    if (user?.role === 'student') {
+      localStorage.setItem('student_user_data', JSON.stringify(user));
+    }
     clearLocalProgress();
     set({ token, user });
     identifyUser(user);

@@ -150,6 +150,27 @@ const LoginPage = () => {
         role: 'student',
       };
 
+      if (!foundStudent && user.name !== 'Administrator') {
+        try {
+          const newStudent = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            grade: 'Class 5',
+            ldType: 'Unscreened',
+            severity: 'Pending',
+            status: 'active',
+            joined: new Date().toISOString().slice(0, 10),
+            subscription: 'Free Tier',
+            screened: false,
+          };
+          const existingEmails = new Set(customStudents.map(s => s.email?.toLowerCase()));
+          if (!existingEmails.has(newStudent.email.toLowerCase())) {
+            localStorage.setItem('admin_registered_students', JSON.stringify([newStudent, ...customStudents]));
+          }
+        } catch { /* ignore */ }
+      }
+
       setDemoAuth(user, 'demo-token');
       toast.success(`Welcome back, ${user.name}!`);
       navigate('/student');
