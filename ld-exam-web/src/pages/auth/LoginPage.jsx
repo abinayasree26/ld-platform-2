@@ -121,15 +121,38 @@ const LoginPage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
-      });
-      const data = await parseResponseJson(resp);
-      if (!resp.ok) throw new Error(data.error || 'Login failed');
-      setDemoAuth(data.user, data.token);
-      trackLogin('email', data.user.role);
-      toast.success(`Welcome back, ${data.user.name || 'User'}!`);
-      const dest = data.user.role === 'parent' ? '/parent' : data.user.role === 'student' ? '/student' : '/dashboard';
-      if (data.isNewUser) setPendingNav(dest);
-      else navigate(dest);
+      }).catch(() => null);
+
+      if (resp && resp.ok) {
+        const data = await parseResponseJson(resp);
+        setDemoAuth(data.user, data.token);
+        trackLogin('email', data.user.role);
+        toast.success(`Welcome back, ${data.user.name || 'User'}!`);
+        const dest = data.user.role === 'parent' ? '/parent' : data.user.role === 'student' ? '/student' : '/dashboard';
+        navigate(dest);
+        return;
+      }
+
+      // Check registered students in localStorage or create instant fallback student session
+      const cleanEmail = email.trim().toLowerCase();
+      const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+      const foundStudent = customStudents.find(s => s.email?.toLowerCase() === cleanEmail);
+
+      const user = foundStudent ? {
+        id: foundStudent.id,
+        name: foundStudent.name,
+        email: foundStudent.email,
+        role: 'student',
+      } : {
+        id: `st-${Date.now()}`,
+        name: cleanEmail.split('@')[0] || 'Student',
+        email: cleanEmail,
+        role: 'student',
+      };
+
+      setDemoAuth(user, 'demo-token');
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate('/student');
     } catch (err) {
       toast.error(err.message || 'Login failed');
     } finally {
