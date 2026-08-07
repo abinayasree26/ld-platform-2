@@ -238,7 +238,27 @@ const AdminStudents = () => {
         }
 
         if (customScreenings.length > 0) {
+          const existingEmails = new Set(list.map(s => s.email));
           const screeningMap = new Map(customScreenings.map(sc => [sc.studentEmail, sc]));
+
+          customScreenings.forEach(sc => {
+            if (sc.studentEmail && !existingEmails.has(sc.studentEmail)) {
+              list.push({
+                id: sc.studentId || `st-${Date.now()}`,
+                name: sc.studentName || 'Student',
+                email: sc.studentEmail,
+                grade: 'Class 5',
+                ldType: sc.ldType ? sc.ldType.charAt(0).toUpperCase() + sc.ldType.slice(1) : 'Dyslexia',
+                severity: sc.severity || 'Moderate',
+                status: 'active',
+                joined: sc.completedAt ? sc.completedAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                subscription: 'Free Tier',
+                screened: true,
+              });
+              existingEmails.add(sc.studentEmail);
+            }
+          });
+
           list = list.map(s => {
             const sc = screeningMap.get(s.email);
             if (sc) {
