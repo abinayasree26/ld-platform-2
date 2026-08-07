@@ -38,27 +38,29 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      adminAPI.getOverview().catch(() => ({})),
-      fetch('/api/admin/students', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-      }).then(r => r.json()).catch(() => ({}))
-    ]).then(([resData, studentsRes]) => {
-      const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-      const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+    adminAPI.getOverview()
+      .then((res) => {
+        const overviewObj = res?.data || res || {};
+        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
-      const fetchedStudents = studentsRes?.students || [];
-      const uniqueStudentEmails = new Set([
-        ...customStudents.map(s => s.email).filter(Boolean),
-        ...customScreenings.map(sc => sc.studentEmail).filter(Boolean),
-        ...fetchedStudents.map(s => s.email).filter(Boolean)
-      ]);
+        const uniqueStudentEmails = new Set([
+          ...customStudents.map(s => s.email).filter(Boolean),
+          ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
+        ]);
 
-      const apiCount = resData?.totalStudents || fetchedStudents.length || 0;
-      const realTotalStudents = Math.max(uniqueStudentEmails.size, apiCount);
-      const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
-      const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
-      const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
+        let apiStudentCount = 0;
+        if (typeof overviewObj.totalStudents === 'number' && overviewObj.totalStudents > 0) {
+          apiStudentCount = overviewObj.totalStudents;
+        } else if (Array.isArray(overviewObj.users)) {
+          const st = overviewObj.users.find(u => u.role === 'student');
+          if (st) apiStudentCount = Number(st.count) || 0;
+        }
+
+        const realTotalStudents = Math.max(uniqueStudentEmails.size, apiStudentCount, customStudents.length, customScreenings.length > 0 ? 1 : 0);
+        const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
+        const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
+        const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
 
         const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
         customScreenings.forEach(sc => {
@@ -78,17 +80,17 @@ const AdminDashboard = () => {
           activeToday: realTotalStudents,
           newSignupsThisWeek: realTotalStudents,
           newSignupsThisMonth: realTotalStudents,
-          subscriptionRevenue: 0,
-          activeSubscriptions: 0,
+          subscriptionRevenue: overviewObj.subscriptionRevenue || 0,
+          activeSubscriptions: overviewObj.activeSubscriptions || 0,
           screeningCompletionRate: screeningRate,
-          conversionRate: 0,
-          atRiskCount: 0,
+          conversionRate: overviewObj.conversionRate || 0,
+          atRiskCount: overviewObj.atRiskCount || 0,
           avgAccuracy: customScreenings.length > 0 ? 82 : 0,
-          totalScreened: realTotalScreened,
-          ldDistribution: ldDistribution.length > 0 ? ldDistribution : [],
-          weeklyActiveUsers: [],
-          signupTrend: [],
-          revenueTrend: [],
+          totalScreened: Math.max(customScreenings.length, overviewObj.totalScreened || 0),
+          ldDistribution: ldDistribution.length > 0 ? ldDistribution : (overviewObj.ldDistribution || []),
+          weeklyActiveUsers: overviewObj.weeklyActiveUsers || [],
+          signupTrend: overviewObj.signupTrend || [],
+          revenueTrend: overviewObj.revenueTrend || [],
         });
       })
       .catch(() => {
@@ -100,6 +102,7 @@ const AdminDashboard = () => {
           ...customScreenings.map(sc => sc.studentEmail).filter(Boolean)
         ]);
 
+        const realTotalStudents = Math.max(uniqueStudentEmails.size, customStudents.length, customScreenings.length > 0 ? 1 : 0);
         const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
         const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
         const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
@@ -128,7 +131,7 @@ const AdminDashboard = () => {
           conversionRate: 0,
           atRiskCount: 0,
           avgAccuracy: customScreenings.length > 0 ? 82 : 0,
-          totalScreened: realTotalScreened,
+          totalScreened: customScreenings.length,
           ldDistribution: ldDistribution.length > 0 ? ldDistribution : [],
           weeklyActiveUsers: [],
           signupTrend: [],
