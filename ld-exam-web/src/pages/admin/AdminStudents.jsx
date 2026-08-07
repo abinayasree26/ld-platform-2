@@ -384,8 +384,24 @@ const AdminStudents = () => {
       await fetch(`/api/admin/students/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success('Student deleted');
+      }).catch(() => { /* ignore */ });
+
+      try {
+        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        const targetStudent = students.find(s => s.id === id);
+        const targetEmail = targetStudent?.email;
+
+        const updatedStudents = customStudents.filter(s => s.id !== id && (targetEmail ? s.email !== targetEmail : true));
+        localStorage.setItem('admin_registered_students', JSON.stringify(updatedStudents));
+
+        if (targetEmail) {
+          const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+          const updatedScreenings = customScreenings.filter(sc => sc.studentEmail !== targetEmail);
+          localStorage.setItem('admin_custom_screening_results', JSON.stringify(updatedScreenings));
+        }
+      } catch { /* ignore */ }
+
+      toast.success(`Student "${name}" deleted successfully`);
       fetchStudents();
     } catch {
       toast.error('Delete failed');
