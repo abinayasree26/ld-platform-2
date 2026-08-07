@@ -89,6 +89,31 @@ router.get('/students', async (req, res) => {
   }
 });
 
+// GET /api/admin/students/:id — Get student detail profile
+router.get('/students/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(
+      `SELECT u.id, u.name, u.email, u.phone, u.created_at AS joined,
+              COALESCE(s.class_grade::text, 'Class 5') AS grade,
+              COALESCE(s.ld_type, 'Unscreened') AS "ldType",
+              COALESCE(s.severity, 'Pending') AS severity,
+              COALESCE(s.status, 'active') AS status
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       WHERE u.id = $1 OR u.email = $1`,
+      [id]
+    );
+
+    if (rows.length > 0) {
+      return res.json(rows[0]);
+    }
+    return res.status(404).json({ error: 'Student not found' });
+  } catch {
+    return res.status(404).json({ error: 'Student not found' });
+  }
+});
+
 // GET /api/admin/screening — List screening results
 router.get('/screening', async (req, res) => {
   try {
