@@ -12,7 +12,7 @@ const FONT_OPTIONS = [
   { key: 'big', label: 'Big' },
 ];
 
-const StudentHeader = ({ showBell = false }) => {
+const StudentHeader = ({ showBell = true }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { toggle } = useSidebarStore();
@@ -23,14 +23,17 @@ const StudentHeader = ({ showBell = false }) => {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [fontMenuOpen, setFontMenuOpen] = useState(false);
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const fontRef = useRef(null);
+  const notifRef = useRef(null);
 
   // Close menus when clicking outside
   useEffect(() => {
     const handleClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
       if (fontRef.current && !fontRef.current.contains(e.target)) setFontMenuOpen(false);
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -40,6 +43,11 @@ const StudentHeader = ({ showBell = false }) => {
     { icon: '👤', label: 'User Profile', path: '/student/profile' },
     { icon: '💳', label: 'Payment', path: '/student/profile/payment' },
     { icon: '🆘', label: 'Help & Support', path: '/student/help' },
+  ];
+
+  const notifications = [
+    { id: 1, title: 'Screening Completed', desc: 'Your screening profile has been calculated.', time: 'Today' },
+    { id: 2, title: 'Practice Level 1 Unlocked', desc: 'Keep practicing to earn your next badge!', time: '1 day ago' },
   ];
 
   const iconBtnStyle = {
@@ -60,6 +68,42 @@ const StudentHeader = ({ showBell = false }) => {
 
       {/* Right side — Icons + Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+        {/* Notifications Bell */}
+        {showBell && (
+          <div ref={notifRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setNotifMenuOpen(!notifMenuOpen)}
+              title="Notifications"
+              style={{ ...iconBtnStyle, position: 'relative', background: notifMenuOpen ? '#e0e7ff' : (mode === 'dark' ? '#334155' : '#f8fafc'), color: mode === 'dark' ? '#fbbf24' : '#64748b' }}
+            >
+              🔔
+              <span style={{ position: 'absolute', top: 4, right: 4, width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
+            </button>
+
+            {/* Notification Dropdown Menu */}
+            {notifMenuOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 8,
+                background: mode === 'dark' ? '#1e293b' : '#fff', borderRadius: 14, padding: '12px 0',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`,
+                minWidth: 280, zIndex: 100,
+              }}>
+                <div style={{ padding: '0 16px 8px', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#f1f5f9'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: mode === 'dark' ? '#f1f5f9' : '#1e293b' }}>Notifications</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#4f46e5', background: '#e0e7ff', padding: '2px 6px', borderRadius: 6 }}>2 New</span>
+                </div>
+                {notifications.map(n => (
+                  <div key={n.id} style={{ padding: '10px 16px', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#f8fafc'}` }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: mode === 'dark' ? '#f1f5f9' : '#1e293b', margin: 0 }}>{n.title}</p>
+                    <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 0' }}>{n.desc}</p>
+                    <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600 }}>{n.time}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Dark/Light Mode Toggle */}
         <button
