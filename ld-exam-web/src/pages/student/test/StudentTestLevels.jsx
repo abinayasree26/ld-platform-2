@@ -14,23 +14,13 @@ const LEVEL_INFO = {
   5: { label: 'Mastery', emoji: '🏆', bg: 'bg-amber-50', border: 'border-amber-200', accent: 'text-amber-700', btn: 'bg-amber-500 hover:bg-amber-600', desc: 'Critical thinking & complex maths' },
 };
 
-// Used when the backend isn't reachable, so the demo flow still works.
-const DEMO_LEVELS = [
-  { level: 1, unlocked: true,  isCurrent: false, everPassed: true,  bestScore: 90 },
-  { level: 2, unlocked: true,  isCurrent: false, everPassed: true,  bestScore: 78 },
-  { level: 3, unlocked: true,  isCurrent: true,  everPassed: false, bestScore: 55 },
+// Default initial level state for new students (0 levels passed)
+const INITIAL_STUDENT_LEVELS = [
+  { level: 1, unlocked: true,  isCurrent: true,  everPassed: false, bestScore: null },
+  { level: 2, unlocked: false, isCurrent: false, everPassed: false, bestScore: null },
+  { level: 3, unlocked: false, isCurrent: false, everPassed: false, bestScore: null },
   { level: 4, unlocked: false, isCurrent: false, everPassed: false, bestScore: null },
   { level: 5, unlocked: false, isCurrent: false, everPassed: false, bestScore: null },
-];
-
-// Used when the backend isn't reachable / no attempts yet, so the demo flow
-// still shows a realistic history — every attempt from first to most recent,
-// including retests, matching the best scores shown on DEMO_LEVELS above.
-const DEFAULT_TEST_HISTORY = [
-  { id: 'demo-1', level: 1, dateTime: '2026-04-01T10:15:00', scorePercent: 62, passed: false, correctCount: 12, totalQuestions: 20, timeTakenSeconds: 1270 },
-  { id: 'demo-2', level: 1, dateTime: '2026-04-03T09:40:00', scorePercent: 90, passed: true, correctCount: 18, totalQuestions: 20, timeTakenSeconds: 1085 },
-  { id: 'demo-3', level: 2, dateTime: '2026-04-10T11:05:00', scorePercent: 78, passed: true, correctCount: 16, totalQuestions: 20, timeTakenSeconds: 1190 },
-  { id: 'demo-4', level: 3, dateTime: '2026-04-20T16:22:00', scorePercent: 55, passed: false, correctCount: 11, totalQuestions: 20, timeTakenSeconds: 1360 },
 ];
 
 const formatScreenTime = (seconds) => {
@@ -49,50 +39,70 @@ const StudentTestLevels = ({ onStart }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const studentKey = user?.email?.toLowerCase() || user?.id || 'guest';
+    let localAttempts = [];
+    try {
+      const saved = localStorage.getItem(`student_test_attempts_${studentKey}`);
+      if (saved) localAttempts = JSON.parse(saved);
+    } catch { /* ignore */ }
+
     Promise.all([
       ldAPI.testLevels().catch(() => ({ levels: null })),
       ldAPI.testHistory().catch(() => ({ attempts: [] })),
     ]).then(([levelsRes, historyRes]) => {
-      const lvls = levelsRes?.levels;
-      let finalLevels = lvls && lvls.length ? lvls : DEMO_LEVELS;
+      const backendAttempts = (historyRes?.attempts || []).map(a => ({
+        id: a.id,
+        level: a.level,
+        dateTime: a.created_at || a.date,
+        scorePercent: a.score,
+        passed: a.passed,
+        correctCount: a.correctCount || Math.round((a.score / 100) * 10),
+        totalQuestions: a.totalQuestions || 10,
+        timeTakenSeconds: a.duration_seconds || a.timeTakenSeconds || 0,
+      }));
 
-      // Override with local progress — if user has passed higher levels locally
-      const highestPassed = user?.highestPassedLevel || 0;
-      if (highestPassed > 0) {
-        finalLevels = finalLevels.map(l => {
-          if (l.level <= highestPassed) {
-            return { ...l, unlocked: true, everPassed: true, isCurrent: false };
-          } else if (l.level === highestPassed + 1) {
-            return { ...l, unlocked: true, isCurrent: true, everPassed: false };
-          }
-          return l;
-        });
+      const allIds = new Set(backendAttempts.map(h => h.id));
+      const combinedHistory = [...backendAttempts, ...localAttempts.filter(h => !allIds.has(h.id))];
+
+      if (combinedHistory.length === 0) {
+        setLevels(INITIAL_STUDENT_LEVELS);
+        setTestHistory([]);
+        return;
       }
 
-      setLevels(finalLevels);
+      // Compute best scores and highest passed level for this student
+      const bestScores = {};
+      const passedLevels = new Set();
+      combinedHistory.forEach(a => {
+        if (a.scorePercent != null) {
+          bestScores[a.level] = Math.max(bestScores[a.level] || 0, a.scorePercent);
+        }
+        if (a.passed) passedLevels.add(a.level);
+      });
 
-      // Map backend test_attempts to the format the UI expects
-      const attempts = historyRes?.attempts || [];
-      let history = [];
-      if (attempts.length > 0) {
-        history = attempts.map(a => ({
-          id: a.id,
-          level: a.level,
-          dateTime: a.created_at || a.date,
-          scorePercent: a.score,
-          passed: a.passed,
-          correctCount: a.correctCount || Math.round((a.score / 100) * 10),
-          totalQuestions: a.totalQuestions || 10,
-          timeTakenSeconds: a.duration_seconds || a.timeTakenSeconds || 0,
-        }));
+      let highestPassed = 0;
+      for (let l = 1; l <= 5; l++) {
+        if (passedLevels.has(l)) highestPassed = l;
+        else break;
       }
-      // Merge any locally-stored attempts (from this session) that aren't in backend response
-      const localHistory = user?.test_history || [];
-      const allIds = new Set(history.map(h => h.id));
-      const merged = [...history, ...localHistory.filter(h => !allIds.has(h.id))];
-      setTestHistory(merged.length > 0 ? merged.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)) : DEFAULT_TEST_HISTORY);
+
+      const computedLevels = [1, 2, 3, 4, 5].map(l => {
+        const isUnlocked = l === 1 || l <= highestPassed + 1;
+        const everPassed = passedLevels.has(l);
+        const isCurrent = l === highestPassed + 1;
+        return {
+          level: l,
+          unlocked: isUnlocked,
+          isCurrent,
+          everPassed,
+          bestScore: bestScores[l] != null ? bestScores[l] : null,
+        };
+      });
+
+      setLevels(computedLevels);
+      setTestHistory(combinedHistory.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)));
     }).finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (

@@ -226,16 +226,39 @@ const StudentTestQuiz = ({ level, onResult, onBack }) => {
     setSubmitting(true);
     clearInterval(timerRef.current);
     const timeTakenMs = Date.now() - startTime.current;
+    let result = null;
     try {
-      const answers = Object.entries(finalAnswers).map(([questionId, studentAnswer]) => ({ questionId, studentAnswer }));
-      const result = await ldAPI.testSubmit(level, answers, timeTakenMs);
+      const answersList = Object.entries(finalAnswers).map(([questionId, studentAnswer]) => ({ questionId, studentAnswer }));
+      result = await ldAPI.testSubmit(level, answersList, timeTakenMs);
       trackTestCompleted(level, result.score, result.passed, timeTakenMs);
-      onResult(result);
     } catch {
-      const result = computeLocalResult(finalAnswers, timeTakenMs);
+      result = computeLocalResult(finalAnswers, timeTakenMs);
       trackTestCompleted(level, result.scorePercent, result.passed, timeTakenMs);
-      onResult(result);
     }
+
+    // Save test attempt to student's local attempts storage
+    try {
+      const userRaw = localStorage.getItem('student_user_data') || localStorage.getItem('user_data');
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        const studentKey = u?.email?.toLowerCase() || u?.id || 'guest';
+        const key = `student_test_attempts_${studentKey}`;
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const newAttempt = {
+          id: `att-${Date.now()}`,
+          level,
+          dateTime: new Date().toISOString(),
+          scorePercent: result.scorePercent || result.score || 0,
+          passed: !!result.passed,
+          correctCount: result.correctCount || 0,
+          totalQuestions: result.totalQuestions || questions.length || 20,
+          timeTakenSeconds: Math.round(timeTakenMs / 1000),
+        };
+        localStorage.setItem(key, JSON.stringify([...existing, newAttempt]));
+      }
+    } catch { /* ignore */ }
+
+    onResult(result);
   }, [level, submitting, token, onResult, questions]);
 
   useEffect(() => {
