@@ -31,7 +31,9 @@ api.interceptors.response.use(
       if (!refreshToken) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(error.response?.data || error);
       }
 
