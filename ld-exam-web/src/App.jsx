@@ -66,18 +66,20 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const App = () => {
   // Initialize Firebase and listen for foreground push notifications
   useEffect(() => {
-    initFirebase();
-    onForegroundMessage((payload) => {
-      const title = payload.notification?.title || 'LD Schools';
-      const body = payload.notification?.body || '';
-      toast(
-        `🔔 ${title}\n${body}`,
-        { duration: 5000, icon: '🔔' }
-      );
-      if (Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/icons/ld-icon-192.png' });
-      }
-    });
+    try {
+      initFirebase();
+      onForegroundMessage((payload) => {
+        const title = payload.notification?.title || 'LD Schools';
+        const body = payload.notification?.body || '';
+        toast(
+          `🔔 ${title}\n${body}`,
+          { duration: 5000, icon: '🔔' }
+        );
+        if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+          try { new Notification(title, { body, icon: '/icons/ld-icon-192.png' }); } catch {}
+        }
+      });
+    } catch {}
   }, []);
 
   return (
