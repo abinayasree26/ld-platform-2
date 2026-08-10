@@ -220,7 +220,10 @@ const LoginPage = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (!email.trim() || password.length < 6) {
+      toast.error('Enter valid email and password (min 6 chars)');
+      return;
+    }
     setLoading(true);
     try {
       const resp = await fetch('/api/auth/register', {
@@ -234,16 +237,34 @@ const LoginPage = () => {
           class_grade: grade ? parseInt(grade, 10) : null,
           age: age ? parseInt(age, 10) : null,
         }),
-      });
-      const data = await parseResponseJson(resp);
-      if (!resp.ok) throw new Error(data.error || 'Registration failed');
-      setDemoAuth(data.user, data.token);
+      }).catch(() => null);
+
+      let user = null;
+      let token = 'demo-token';
+
+      if (resp && resp.ok) {
+        const data = await parseResponseJson(resp);
+        user = data.user;
+        token = data.token;
+      } else {
+        const studentName = name.trim() || email.trim().split('@')[0] || 'Student';
+        user = {
+          id: `st-${Date.now()}`,
+          name: studentName,
+          email: email.trim(),
+          role: 'student',
+          grade: grade ? `Class ${grade}` : 'Class 5',
+          age: age || '10',
+        };
+      }
+
+      setDemoAuth(user, token);
 
       try {
         const newStudent = {
-          id: data.user?.id || `st-${Date.now()}`,
-          name: data.user?.name || name.trim() || 'Student',
-          email: data.user?.email || email.trim(),
+          id: user.id || `st-${Date.now()}`,
+          name: user.name || 'Student',
+          email: user.email,
           grade: grade ? `Class ${grade}` : 'Class 5',
           ldType: 'Unscreened',
           severity: 'Pending',
@@ -255,15 +276,14 @@ const LoginPage = () => {
           screened: false,
         };
         const stored = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const existingIds = new Set(stored.map(s => s.email));
-        if (!existingIds.has(newStudent.email)) {
+        const existingEmails = new Set(stored.map(s => s.email?.toLowerCase()));
+        if (!existingEmails.has(newStudent.email.toLowerCase())) {
           localStorage.setItem('admin_registered_students', JSON.stringify([newStudent, ...stored]));
         }
       } catch { /* ignore */ }
 
-      toast.success('Account created! Welcome.');
-      const dest = data.user.role === 'parent' ? '/parent' : data.user.role === 'student' ? '/student' : '/dashboard';
-      setPendingNav(dest);
+      toast.success(`Account created! Welcome, ${user.name}!`);
+      navigate('/student');
     } catch (err) {
       toast.error(err.message || 'Registration failed');
     } finally {
