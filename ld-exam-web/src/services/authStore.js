@@ -9,9 +9,14 @@ function clearLocalProgress() {
   try { localStorage.removeItem('ld_local_progress'); } catch {}
 }
 
+const safeParse = (str) => {
+  if (!str || str === 'undefined' || str === 'null') return null;
+  try { return JSON.parse(str); } catch { return null; }
+};
+
 const useAuthStore = create((set) => ({
   token: localStorage.getItem('auth_token') || null,
-  user: JSON.parse(localStorage.getItem('user_data') || 'null'),
+  user: safeParse(localStorage.getItem('user_data')),
 
   login: async (token, type = 'supabase') => {
     const result = await authAPI.login(token, type);
