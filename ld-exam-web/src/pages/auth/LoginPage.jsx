@@ -109,6 +109,28 @@ const LoginPage = () => {
         return;
       }
 
+      // Record Admin Login entry in security audit log
+      try {
+        const savedLogs = JSON.parse(localStorage.getItem('admin_audit_logs') || '[]');
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+        let device = 'Chrome / Windows';
+        if (userAgent.includes('Macintosh')) device = 'Safari / macOS';
+        else if (userAgent.includes('Android')) device = 'Chrome / Android';
+        else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) device = 'Safari / iOS';
+
+        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const ip = (host === 'localhost' || host === '127.0.0.1') ? '127.0.0.1 (Local)' : 'Cloud / Web Client';
+
+        const updatedLogs = [
+          { date: dateStr, action: `Admin Login (${adminUsername.trim() || 'Administrator'})`, ip, device },
+          ...savedLogs,
+        ].slice(0, 20);
+        localStorage.setItem('admin_audit_logs', JSON.stringify(updatedLogs));
+      } catch { /* ignore */ }
+
       // Static deployment fallback for Admin login
       const adminUser = {
         id: 'admin-1',
