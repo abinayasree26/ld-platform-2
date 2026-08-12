@@ -238,7 +238,7 @@ const AdminStudents = () => {
       try {
         const { data: supaStudents } = await supabase.from('students').select('*').order('created_at', { ascending: false });
         if (supaStudents && supaStudents.length > 0) {
-          const existingEmails = new Set(list.map(s => s.email));
+          const existingEmails = new Set(list.map(s => s.email?.toLowerCase()));
           const supaFormatted = supaStudents.map(s => ({
             id: s.id,
             name: s.name,
@@ -252,9 +252,12 @@ const AdminStudents = () => {
             lastActive: s.last_active || 'Today',
             subscription: s.subscription || 'Free Tier',
             screened: s.screened || false,
-          })).filter(s => !existingEmails.has(s.email));
+          }));
 
-          list = [...supaFormatted, ...list];
+          // Merge: Supabase Cloud DB students take top priority
+          const supaEmailSet = new Set(supaFormatted.map(s => s.email?.toLowerCase()));
+          const localOnly = list.filter(s => !supaEmailSet.has(s.email?.toLowerCase()));
+          list = [...supaFormatted, ...localOnly];
         }
       } catch { /* fallback */ }
 

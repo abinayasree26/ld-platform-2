@@ -202,14 +202,20 @@ const StudentScreeningPage = () => {
       const filteredStored = stored.filter(s => s.studentName !== 'Administrator' && s.studentEmail !== 'student@gmail.com');
       localStorage.setItem('admin_custom_screening_results', JSON.stringify([newSubmission, ...filteredStored]));
 
-      // Real-time Cloud DB update in Supabase
+      // Real-time Cloud DB upsert in Supabase (creates or updates)
       const formattedLdType = newSubmission.ldType ? (newSubmission.ldType.charAt(0).toUpperCase() + newSubmission.ldType.slice(1)) : 'Dyslexia';
-      supabase.from('students').update({
+      supabase.from('students').upsert([{
+        id: newSubmission.studentId || `st-${Date.now()}`,
+        name: sName,
+        email: sEmail.toLowerCase(),
         ld_type: formattedLdType,
         severity: newSubmission.severity,
         screened: true,
+        level: 'Level 1',
+        status: 'active',
         last_active: 'Today',
-      }).eq('email', sEmail.toLowerCase()).then(() => {}).catch(() => {});
+        subscription: 'Free Tier',
+      }], { onConflict: 'email' }).then(() => {}).catch(() => {});
     } catch { /* ignore */ }
   };
 
