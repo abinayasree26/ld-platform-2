@@ -42,7 +42,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     Promise.all([
       adminAPI.getOverview().catch(() => ({})),
-      supabase.from('students').select('email').then(res => res.data || []).catch(() => []),
+      supabase.from('students').select('email, screened, ld_type').then(res => res.data || []).catch(() => []),
     ]).then(([res, supaData]) => {
         const overviewObj = res?.data || res || {};
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
@@ -51,24 +51,36 @@ const AdminDashboard = () => {
         const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
         const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
+        const supaScreenedEmails = supaData.filter(s => s.screened || (s.ld_type && s.ld_type !== 'Unscreened')).map(s => s.email?.toLowerCase()).filter(Boolean);
+        const localScreenedEmails = customScreenings.map(sc => sc.studentEmail?.toLowerCase()).filter(Boolean);
+        const uniqueScreenedEmails = new Set([...supaScreenedEmails, ...localScreenedEmails]);
+
         const uniqueStudentEmails = new Set([
-          ...supaData.map(s => s.email).filter(Boolean),
-          ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
-          ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
+          ...supaData.map(s => s.email?.toLowerCase()).filter(Boolean),
+          ...customStudents.map(s => s.email?.toLowerCase()).filter(e => e && e !== 'student@gmail.com'),
+          ...customScreenings.map(sc => sc.studentEmail?.toLowerCase()).filter(e => e && e !== 'student@gmail.com')
         ]);
 
         const realTotalStudents = uniqueStudentEmails.size;
-        const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
         const screenedStudentCount = uniqueScreenedEmails.size;
         const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
 
         const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
+
+        supaData.forEach(s => {
+          const type = (s.ld_type || '').toLowerCase();
+          if (type.includes('dyslexia')) ldCounts.Dyslexia++;
+          else if (type.includes('dyscalculia')) ldCounts.Dyscalculia++;
+          else if (type.includes('dysgraphia')) ldCounts.Dysgraphia++;
+          else if (type && type !== 'unscreened' && type !== 'pending') ldCounts.Mixed++;
+        });
+
         customScreenings.forEach(sc => {
           const type = (sc.ldType || '').toLowerCase();
           if (type.includes('dyslexia')) ldCounts.Dyslexia++;
           else if (type.includes('dyscalculia')) ldCounts.Dyscalculia++;
           else if (type.includes('dysgraphia')) ldCounts.Dysgraphia++;
-          else ldCounts.Mixed++;
+          else if (type && type !== 'unscreened') ldCounts.Mixed++;
         });
 
         const ldDistribution = Object.entries(ldCounts)
@@ -85,8 +97,8 @@ const AdminDashboard = () => {
           screeningCompletionRate: screeningRate,
           conversionRate: overviewObj.conversionRate || 0,
           atRiskCount: overviewObj.atRiskCount || 0,
-          avgAccuracy: customScreenings.length > 0 ? 82 : 0,
-          totalScreened: Math.max(customScreenings.length, overviewObj.totalScreened || 0),
+          avgAccuracy: screenedStudentCount > 0 ? 82 : 0,
+          totalScreened: screenedStudentCount,
           ldDistribution: ldDistribution.length > 0 ? ldDistribution : (overviewObj.ldDistribution || []),
           weeklyActiveUsers: overviewObj.weeklyActiveUsers || [],
           signupTrend: overviewObj.signupTrend || [],
