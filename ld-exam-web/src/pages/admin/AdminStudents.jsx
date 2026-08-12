@@ -441,26 +441,47 @@ const AdminStudents = () => {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Are you sure you want to permanently delete "${name}"? This cannot be undone.`)) return;
     try {
-      const token = localStorage.getItem('auth_token');
-      await fetch(`/api/admin/students/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => { /* ignore */ });
+      const targetStudent = students.find(s => s.id === id);
+      const targetEmail = targetStudent?.email?.toLowerCase();
 
+      // Delete from Supabase Cloud DB
+      try {
+        if (targetEmail) {
+          await supabase.from('students').delete().eq('email', targetEmail);
+          await supabase.from('screening_results').delete().eq('student_email', targetEmail);
+          await supabase.from('test_attempts').delete().eq('student_email', targetEmail);
+          await supabase.from('practice_sessions').delete().eq('student_email', targetEmail);
+        }
+        if (id) {
+          await supabase.from('students').delete().eq('id', id);
+        }
+      } catch { /* fallback */ }
+
+      // Delete from backend API if available
+      try {
+        const token = localStorage.getItem('auth_token');
+        await fetch(`/api/admin/students/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+      } catch { /* ignore */ }
+
+      // Delete from Local Storage
       try {
         const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const targetStudent = students.find(s => s.id === id);
-        const targetEmail = targetStudent?.email;
-
-        const updatedStudents = customStudents.filter(s => s.id !== id && (targetEmail ? s.email !== targetEmail : true));
+        const updatedStudents = customStudents.filter(s => s.id !== id && (targetEmail ? s.email?.toLowerCase() !== targetEmail : true));
         localStorage.setItem('admin_registered_students', JSON.stringify(updatedStudents));
 
         if (targetEmail) {
           const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
-          const updatedScreenings = customScreenings.filter(sc => sc.studentEmail !== targetEmail);
+          const updatedScreenings = customScreenings.filter(sc => sc.studentEmail?.toLowerCase() !== targetEmail);
           localStorage.setItem('admin_custom_screening_results', JSON.stringify(updatedScreenings));
         }
       } catch { /* ignore */ }
+
+      // Update state immediately
+      setStudents(prev => prev.filter(s => s.id !== id && (targetEmail ? s.email?.toLowerCase() !== targetEmail : true)));
+      setTotal(prev => Math.max(0, prev - 1));
 
       toast.success(`Student "${name}" deleted successfully`);
       fetchStudents();
