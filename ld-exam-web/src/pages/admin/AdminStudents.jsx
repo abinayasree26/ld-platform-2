@@ -314,6 +314,14 @@ const AdminStudents = () => {
         }
       } catch { /* ignore */ }
 
+      // Filter out permanently deleted student emails
+      try {
+        const deletedEmails = new Set(JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]'));
+        if (deletedEmails.size > 0) {
+          list = list.filter(s => !deletedEmails.has(s.email?.toLowerCase()));
+        }
+      } catch { /* ignore */ }
+
       // Final strict filter: Never show Administrator or fake demo student entries in Student Management
       list = list.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
 
@@ -476,6 +484,11 @@ const AdminStudents = () => {
           const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
           const updatedScreenings = customScreenings.filter(sc => sc.studentEmail?.toLowerCase() !== targetEmail);
           localStorage.setItem('admin_custom_screening_results', JSON.stringify(updatedScreenings));
+
+          const deletedEmails = JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]');
+          if (!deletedEmails.includes(targetEmail)) {
+            localStorage.setItem('admin_deleted_student_emails', JSON.stringify([...deletedEmails, targetEmail]));
+          }
         }
       } catch { /* ignore */ }
 
