@@ -3,6 +3,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
 
+import { supabase } from '../../services/supabaseClient';
+
 const LD_BADGE = {
   Dyslexia: 'bg-purple-50 text-purple-700',
   Dyscalculia: 'bg-blue-50 text-blue-700',
@@ -91,17 +93,44 @@ const AdminScreening = () => {
       if (filterStatus !== 'all') params.set('status', filterStatus);
 
       const token = localStorage.getItem('auth_token');
-      const resp = await fetch(`/api/admin/screening?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await resp.json();
-      let list = data.results || [];
+      let list = [];
+      try {
+        const resp = await fetch(`/api/admin/screening?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+        if (resp && resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          list = data.results || [];
+        }
+      } catch { /* ignore api fallback */ }
+
+      try {
+        const { data: supaScreened } = await supabase.from('students').select('*').eq('screened', true);
+        if (supaScreened && supaScreened.length > 0) {
+          const existingEmails = new Set(list.map(r => r.studentEmail || r.email));
+          const supaFormatted = supaScreened.map(s => ({
+            id: `supa-sr-${s.id}`,
+            studentId: s.id,
+            studentName: s.name,
+            studentEmail: s.email,
+            ldType: s.ld_type || 'Dyslexia',
+            severity: s.severity || 'Moderate',
+            riskScore: 50,
+            status: 'completed',
+            completedAt: s.created_at || new Date().toISOString(),
+            breakdown: { dyslexia: 50, dysgraphia: 40, dyscalculia: 30 },
+          })).filter(s => !existingEmails.has(s.studentEmail));
+
+          list = [...supaFormatted, ...list];
+        }
+      } catch { /* fallback */ }
+
       try {
         const rawSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
         const customSubmissions = rawSubmissions.filter(s => s.studentName !== 'Administrator' && s.studentName !== 'Admin User' && s.studentEmail !== 'student@gmail.com');
         if (customSubmissions.length > 0) {
-          const existingIds = new Set(list.map(r => r.id));
-          const newCustom = customSubmissions.filter(s => !existingIds.has(s.id));
+          const existingEmails = new Set(list.map(r => r.studentEmail || r.email));
+          const newCustom = customSubmissions.filter(s => !existingEmails.has(s.studentEmail));
           list = [...newCustom, ...list];
         }
       } catch { /* ignore */ }
@@ -120,23 +149,8 @@ const AdminScreening = () => {
       setResults(uniqueList);
       setStats({ total: uniqueList.length, completed: uniqueList.length, pending: 0 });
     } catch {
-      let list = [];
-      try {
-        const rawSubmissions = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
-        list = rawSubmissions.filter(s => s.studentName !== 'Administrator' && s.studentName !== 'Admin User' && s.studentEmail !== 'student@gmail.com');
-      } catch { /* ignore */ }
-
-      const latestPerStudentMap = new Map();
-      list.forEach(item => {
-        const email = item.studentEmail || item.email || item.studentName;
-        if (!latestPerStudentMap.has(email)) {
-          latestPerStudentMap.set(email, item);
-        }
-      });
-      const uniqueList = Array.from(latestPerStudentMap.values());
-
-      setResults(uniqueList);
-      setStats({ total: uniqueList.length, completed: uniqueList.length, pending: 0 });
+      setResults([]);
+      setStats({ total: 0, completed: 0, pending: 0 });
     } finally {
       setLoading(false);
     }

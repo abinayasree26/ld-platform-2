@@ -7,6 +7,8 @@ import { recordScreening } from '../../../services/progressStore';
 import AboutIcon from '../../../components/AboutIcon';
 
 
+import { supabase } from '../../../services/supabaseClient';
+
 const LD_RESULT = {
   dyslexia:    { label: 'Dyslexia', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200', icon: '🧠' },
   dysgraphia:  { label: 'Dysgraphia', color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200', icon: '✍️' },
@@ -199,6 +201,15 @@ const StudentScreeningPage = () => {
       const stored = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
       const filteredStored = stored.filter(s => s.studentName !== 'Administrator' && s.studentEmail !== 'student@gmail.com');
       localStorage.setItem('admin_custom_screening_results', JSON.stringify([newSubmission, ...filteredStored]));
+
+      // Real-time Cloud DB update in Supabase
+      const formattedLdType = newSubmission.ldType ? (newSubmission.ldType.charAt(0).toUpperCase() + newSubmission.ldType.slice(1)) : 'Dyslexia';
+      supabase.from('students').update({
+        ld_type: formattedLdType,
+        severity: newSubmission.severity,
+        screened: true,
+        last_active: 'Today',
+      }).eq('email', sEmail.toLowerCase()).then(() => {}).catch(() => {});
     } catch { /* ignore */ }
   };
 
