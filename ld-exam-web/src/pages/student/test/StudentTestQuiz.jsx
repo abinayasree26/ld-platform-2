@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { trackTestStarted, trackTestCompleted, trackTestAbandoned } from '../../../services/analytics';
 import { ldAPI } from '../../../services/api';
 
+import { supabase } from '../../../services/supabaseClient';
+
 const LEVEL_LABELS = ['', 'Starter', 'Basic', 'Intermediate', 'Advanced', 'Mastery'];
 const LEVEL_COLORS = ['', 'bg-green-600', 'bg-blue-600', 'bg-orange-500', 'bg-purple-600', 'bg-amber-500'];
 const TOTAL_TIME = 25 * 60; // 25 minutes in seconds
@@ -236,7 +238,7 @@ const StudentTestQuiz = ({ level, onResult, onBack }) => {
       trackTestCompleted(level, result.scorePercent, result.passed, timeTakenMs);
     }
 
-    // Save test attempt to student's local attempts storage
+    // Save test attempt to student's local & cloud attempts storage
     try {
       const userRaw = localStorage.getItem('student_user_data') || localStorage.getItem('user_data');
       if (userRaw) {
@@ -255,6 +257,20 @@ const StudentTestQuiz = ({ level, onResult, onBack }) => {
           timeTakenSeconds: Math.round(timeTakenMs / 1000),
         };
         localStorage.setItem(key, JSON.stringify([...existing, newAttempt]));
+
+        // Real-time Cloud DB save to Supabase test_attempts table
+        supabase.from('test_attempts').upsert([{
+          id: newAttempt.id,
+          student_id: u?.id || 'st-demo',
+          student_email: studentKey,
+          level: newAttempt.level,
+          score_percent: newAttempt.scorePercent,
+          passed: newAttempt.passed,
+          correct_count: newAttempt.correctCount,
+          total_questions: newAttempt.totalQuestions,
+          time_taken_seconds: newAttempt.timeTakenSeconds,
+          created_at: newAttempt.dateTime,
+        }]).then(() => {}).catch(() => {});
       }
     } catch { /* ignore */ }
 

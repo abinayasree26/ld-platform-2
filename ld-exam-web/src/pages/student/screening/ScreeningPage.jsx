@@ -216,6 +216,20 @@ const StudentScreeningPage = () => {
         last_active: 'Today',
         subscription: 'Free Tier',
       }], { onConflict: 'email' }).then(() => {}).catch(() => {});
+
+      // Save detailed assessment entry in screening_results table
+      supabase.from('screening_results').upsert([{
+        id: newSubmission.id,
+        student_id: newSubmission.studentId,
+        student_name: sName,
+        student_email: sEmail.toLowerCase(),
+        ld_type: formattedLdType,
+        severity: newSubmission.severity,
+        risk_score: newSubmission.riskScore,
+        status: 'completed',
+        completed_at: newSubmission.completedAt,
+        breakdown: newSubmission.breakdown,
+      }]).then(() => {}).catch(() => {});
     } catch { /* ignore */ }
   };
 

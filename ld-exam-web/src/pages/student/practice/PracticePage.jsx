@@ -10,6 +10,8 @@ import StudentHeader from '../../../components/StudentHeader';
 import { isCategoryUnlocked } from '../../../data/subscriptionPlans';
 import AboutIcon from '../../../components/AboutIcon';
 
+import { supabase } from '../../../services/supabaseClient';
+
 const card = { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 
 const COMPLIMENTS = [
@@ -166,16 +168,35 @@ const PracticePage = () => {
   const subscription = user?.subscription || 'advanced';
   const [practiceHistory, setPracticeHistory] = useState([]);
 
-  const fetchHistory = () => {
-    ldAPI.practiceHistory()
-      .then(data => { if (data?.sessions) setPracticeHistory(data.sessions); })
-      .catch(() => {});
+  const fetchHistory = async () => {
+    try {
+      const data = await ldAPI.practiceHistory();
+      if (data?.sessions && data.sessions.length > 0) {
+        setPracticeHistory(data.sessions);
+        return;
+      }
+    } catch { /* fallback */ }
+
+    try {
+      const sEmail = user?.email?.toLowerCase();
+      const { data: supaHistory } = await supabase.from('practice_sessions').select('*').order('created_at', { ascending: false });
+      if (supaHistory && supaHistory.length > 0) {
+        const filtered = supaHistory.filter(s => !sEmail || s.student_email === sEmail);
+        setPracticeHistory(filtered.map(s => ({
+          id: s.id,
+          session_type: s.category,
+          exercises_correct: Math.round((s.score_percent / 100) * 5),
+          exercises_total: 5,
+          created_at: s.created_at,
+        })));
+      }
+    } catch { /* fallback */ }
   };
 
   // Fetch practice and test history
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [user]);
 
   const [active, setActive] = useState(null);      // category key or null (category picker)
   const [current, setCurrent] = useState(0);
@@ -267,16 +288,17 @@ const PracticePage = () => {
     }
   };
 
-  // Save practice session to backend when finished
+  // Save practice session to backend & Supabase when finished
   const savePracticeSession = (categoryKey, totalQuestions, correctCount) => {
     // Record locally for dashboard updates
     // Clamp correct count to the total so the percentage can never exceed 100%.
     const safeCorrect = Math.min(correctCount, totalQuestions);
     const scorePercent = totalQuestions > 0 ? Math.round((safeCorrect / totalQuestions) * 100) : 0;
+    const durationSeconds = Math.round((Date.now() - (window._practiceStartTime || Date.now())) / 1000) || 60;
     recordPractice({
       category: categoryKey,
       score: scorePercent,
-      durationMinutes: Math.round((Date.now() - (window._practiceStartTime || Date.now())) / 60000) || 1,
+      durationMinutes: Math.round(durationSeconds / 60) || 1,
       exercises: totalQuestions,
     });
     ldAPI.practiceSubmit({
@@ -284,6 +306,17 @@ const PracticePage = () => {
       exercises_total: totalQuestions,
       exercises_correct: safeCorrect,
     }).then(() => fetchHistory()).catch(() => {});
+
+    // Save to Supabase Cloud DB practice_sessions table
+    supabase.from('practice_sessions').upsert([{
+      id: `ps-${Date.now()}`,
+      student_id: user?.id || 'st-demo',
+      student_email: user?.email?.toLowerCase() || 'guest@gmail.com',
+      category: categoryKey,
+      score_percent: scorePercent,
+      time_taken_seconds: durationSeconds,
+      created_at: new Date().toISOString(),
+    }]).then(() => fetchHistory()).catch(() => {});
   };
 
   const next = () => {

@@ -43,7 +43,9 @@ const AdminDashboard = () => {
     Promise.all([
       adminAPI.getOverview().catch(() => ({})),
       supabase.from('students').select('email, screened, ld_type').then(res => res.data || []).catch(() => []),
-    ]).then(([res, supaData]) => {
+      supabase.from('practice_sessions').select('*').then(res => res.data || []).catch(() => []),
+      supabase.from('test_attempts').select('*').then(res => res.data || []).catch(() => []),
+    ]).then(([res, supaData, supaPractice, supaTests]) => {
         const overviewObj = res?.data || res || {};
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
@@ -64,6 +66,10 @@ const AdminDashboard = () => {
         const realTotalStudents = uniqueStudentEmails.size;
         const screenedStudentCount = uniqueScreenedEmails.size;
         const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
+
+        const totalSessions = supaPractice.length + supaTests.length;
+        const allScores = [...supaPractice.map(p => p.score_percent), ...supaTests.map(t => t.score_percent)].filter(n => typeof n === 'number');
+        const realAvgAccuracy = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : (overviewObj.avgAccuracy || 0);
 
         const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
 
@@ -97,7 +103,7 @@ const AdminDashboard = () => {
           screeningCompletionRate: screeningRate,
           conversionRate: overviewObj.conversionRate || 0,
           atRiskCount: overviewObj.atRiskCount || 0,
-          avgAccuracy: overviewObj.avgAccuracy || 0,
+          avgAccuracy: realAvgAccuracy,
           totalScreened: screenedStudentCount,
           ldDistribution: ldDistribution.length > 0 ? ldDistribution : (overviewObj.ldDistribution || []),
           weeklyActiveUsers: overviewObj.weeklyActiveUsers || [],
