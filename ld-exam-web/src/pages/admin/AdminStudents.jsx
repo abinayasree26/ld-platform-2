@@ -491,19 +491,19 @@ const AdminStudents = () => {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Are you sure you want to permanently delete "${name}"? This cannot be undone.`)) return;
     try {
-      const targetStudent = students.find(s => s.id === id);
-      const targetEmail = targetStudent?.email?.toLowerCase();
+      const targetStudent = students.find(s => String(s.id) === String(id) || (s.email && s.email.toLowerCase() === String(id).toLowerCase()));
+      const targetEmail = (targetStudent?.email || (typeof id === 'string' && id.includes('@') ? id : '')).toLowerCase();
 
       // Delete from Supabase Cloud DB
       try {
         if (targetEmail) {
-          await supabase.from('students').delete().eq('email', targetEmail);
-          await supabase.from('screening_results').delete().eq('student_email', targetEmail);
-          await supabase.from('test_attempts').delete().eq('student_email', targetEmail);
-          await supabase.from('practice_sessions').delete().eq('student_email', targetEmail);
+          await supabase.from('students').delete().ilike('email', targetEmail).catch(() => null);
+          await supabase.from('screening_results').delete().ilike('student_email', targetEmail).catch(() => null);
+          await supabase.from('test_attempts').delete().ilike('student_email', targetEmail).catch(() => null);
+          await supabase.from('practice_sessions').delete().ilike('student_email', targetEmail).catch(() => null);
         }
-        if (id) {
-          await supabase.from('students').delete().eq('id', id);
+        if (id && !String(id).includes('@')) {
+          await supabase.from('students').delete().eq('id', id).catch(() => null);
         }
       } catch { /* fallback */ }
 
@@ -519,7 +519,7 @@ const AdminStudents = () => {
       // Delete from Local Storage
       try {
         const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        const updatedStudents = customStudents.filter(s => s.id !== id && (targetEmail ? s.email?.toLowerCase() !== targetEmail : true));
+        const updatedStudents = customStudents.filter(s => String(s.id) !== String(id) && (targetEmail ? s.email?.toLowerCase() !== targetEmail : true));
         localStorage.setItem('admin_registered_students', JSON.stringify(updatedStudents));
 
         if (targetEmail) {
@@ -535,7 +535,7 @@ const AdminStudents = () => {
       } catch { /* ignore */ }
 
       // Update state immediately
-      setStudents(prev => prev.filter(s => s.id !== id && (targetEmail ? s.email?.toLowerCase() !== targetEmail : true)));
+      setStudents(prev => prev.filter(s => String(s.id) !== String(id) && (targetEmail ? s.email?.toLowerCase() !== targetEmail : true)));
       setTotal(prev => Math.max(0, prev - 1));
 
       toast.success(`Student "${name}" deleted successfully`);
@@ -555,26 +555,26 @@ const AdminStudents = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete ${selectedIds.length} selected students? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${selectedIds.length} selected student(s)? This cannot be undone.`)) return;
     try {
       const deletedEmails = JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]');
       const newDeletedEmails = [...deletedEmails];
 
       for (const id of selectedIds) {
-        const targetStudent = students.find(s => s.id === id);
-        const targetEmail = targetStudent?.email?.toLowerCase();
+        const targetStudent = students.find(s => String(s.id) === String(id) || (s.email && s.email.toLowerCase() === String(id).toLowerCase()));
+        const targetEmail = (targetStudent?.email || (typeof id === 'string' && id.includes('@') ? id : '')).toLowerCase();
 
         if (targetEmail) {
-          await supabase.from('students').delete().eq('email', targetEmail).catch(() => null);
-          await supabase.from('screening_results').delete().eq('student_email', targetEmail).catch(() => null);
-          await supabase.from('test_attempts').delete().eq('student_email', targetEmail).catch(() => null);
-          await supabase.from('practice_sessions').delete().eq('student_email', targetEmail).catch(() => null);
+          await supabase.from('students').delete().ilike('email', targetEmail).catch(() => null);
+          await supabase.from('screening_results').delete().ilike('student_email', targetEmail).catch(() => null);
+          await supabase.from('test_attempts').delete().ilike('student_email', targetEmail).catch(() => null);
+          await supabase.from('practice_sessions').delete().ilike('student_email', targetEmail).catch(() => null);
 
           if (!newDeletedEmails.includes(targetEmail)) {
             newDeletedEmails.push(targetEmail);
           }
         }
-        if (id) {
+        if (id && !String(id).includes('@')) {
           await supabase.from('students').delete().eq('id', id).catch(() => null);
         }
       }
