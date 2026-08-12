@@ -29,7 +29,7 @@ const AdminAnalytics = () => {
     const token = localStorage.getItem('auth_token');
     Promise.all([
       fetch('/api/admin/analytics', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
-      supabase.from('students').select('email').then(res => res.data || []).catch(() => []),
+      supabase.from('students').select('email, screened, ld_type').then(res => res.data || []).catch(() => []),
     ]).then(([resData, supaData]) => {
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
@@ -37,21 +37,29 @@ const AdminAnalytics = () => {
         const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
         const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
+        const supaScreenedEmails = supaData.filter(s => s.screened || (s.ld_type && s.ld_type !== 'Unscreened')).map(s => s.email?.toLowerCase()).filter(Boolean);
+        const localScreenedEmails = customScreenings.map(sc => sc.studentEmail?.toLowerCase()).filter(Boolean);
+        const uniqueScreenedEmails = new Set([...supaScreenedEmails, ...localScreenedEmails]);
+
         const uniqueStudentEmails = new Set([
-          ...supaData.map(s => s.email).filter(Boolean),
-          ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
-          ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
+          ...supaData.map(s => s.email?.toLowerCase()).filter(Boolean),
+          ...customStudents.map(s => s.email?.toLowerCase()).filter(e => e && e !== 'student@gmail.com'),
+          ...customScreenings.map(sc => sc.studentEmail?.toLowerCase()).filter(e => e && e !== 'student@gmail.com')
         ]);
         const totalCount = uniqueStudentEmails.size;
-        const screenedCount = customScreenings.length;
+        const screenedCount = uniqueScreenedEmails.size;
+
+        const totalSessions = resData?.overview?.totalPracticeSessions || 0;
+        const avgAccuracy = totalSessions > 0 ? (resData?.overview?.avgAccuracy || 0) : 0;
+        const avgSessionMinutes = totalSessions > 0 ? (resData?.overview?.avgSessionMinutes || 0) : 0;
 
         setData({
           overview: {
             totalStudents: totalCount,
             activeThisWeek: totalCount,
-            avgAccuracy: screenedCount > 0 ? 82 : 0,
-            avgSessionMinutes: screenedCount > 0 ? 15 : 0,
-            totalPracticeSessions: screenedCount,
+            avgAccuracy: avgAccuracy,
+            avgSessionMinutes: avgSessionMinutes,
+            totalPracticeSessions: totalSessions,
             screenedStudents: screenedCount,
           },
           dailyActiveUsers: resData?.dailyActiveUsers || [],
