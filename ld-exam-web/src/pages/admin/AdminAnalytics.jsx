@@ -38,7 +38,7 @@ const AdminAnalytics = () => {
           ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
           ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
-        const totalCount = uniqueStudentEmails.size > 0 ? uniqueStudentEmails.size : 1;
+        const totalCount = uniqueStudentEmails.size;
         const screenedCount = customScreenings.length;
 
         setData({
@@ -71,7 +71,7 @@ const AdminAnalytics = () => {
           ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
           ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
-        const totalCount = uniqueStudentEmails.size > 0 ? uniqueStudentEmails.size : 1;
+        const totalCount = uniqueStudentEmails.size;
         const screenedCount = customScreenings.length;
 
         setData({
