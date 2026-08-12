@@ -314,6 +314,48 @@ const AdminStudents = () => {
         }
       } catch { /* ignore */ }
 
+      // Query highest passed test levels from test_attempts table in Supabase
+      const maxLevelMap = new Map();
+      try {
+        const { data: supaAttempts } = await supabase.from('test_attempts').select('student_email, level, passed').catch(() => ({ data: [] }));
+        if (supaAttempts && supaAttempts.length > 0) {
+          supaAttempts.forEach(att => {
+            const email = att.student_email?.toLowerCase();
+            if (email && att.passed) {
+              const currentMax = maxLevelMap.get(email) || 1;
+              maxLevelMap.set(email, Math.max(currentMax, (att.level || 0) + 1));
+            }
+          });
+        }
+      } catch { /* ignore */ }
+
+      // Also check local test attempts
+      list.forEach(s => {
+        const email = s.email?.toLowerCase();
+        if (email) {
+          try {
+            const key = `student_test_attempts_${email}`;
+            const localAtts = JSON.parse(localStorage.getItem(key) || '[]');
+            localAtts.forEach(att => {
+              if (att.passed) {
+                const currentMax = maxLevelMap.get(email) || 1;
+                maxLevelMap.set(email, Math.max(currentMax, (att.level || 0) + 1));
+              }
+            });
+          } catch { /* ignore */ }
+        }
+      });
+
+      // Update student level dynamically
+      list = list.map(s => {
+        const email = s.email?.toLowerCase();
+        const calculatedLevel = maxLevelMap.get(email);
+        return {
+          ...s,
+          level: calculatedLevel ? `Level ${calculatedLevel}` : (s.level || 'Level 1'),
+        };
+      });
+
       // Filter out permanently deleted student emails
       try {
         const deletedEmails = new Set(JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]'));
@@ -547,6 +589,9 @@ const AdminStudents = () => {
       const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
       const updatedScreenings = customScreenings.filter(sc => !newDeletedEmails.includes(sc.studentEmail?.toLowerCase()));
       localStorage.setItem('admin_custom_screening_results', JSON.stringify(updatedScreenings));
+
+      setStudents(prev => prev.filter(s => !selectedIds.includes(s.id) && !newDeletedEmails.includes(s.email?.toLowerCase())));
+      setTotal(prev => Math.max(0, prev - selectedIds.length));
 
       toast.success(`${selectedIds.length} student(s) deleted successfully`);
       setSelectedIds([]);
