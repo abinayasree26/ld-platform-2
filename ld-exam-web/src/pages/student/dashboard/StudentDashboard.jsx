@@ -15,6 +15,8 @@ import LevelAvatar from '../../../components/LevelAvatar';
 import { currentAvatarLevel } from '../../../data/avatarSystem';
 import AboutIcon from '../../../components/AboutIcon';
 
+import { supabase } from '../../../services/supabaseClient';
+
 const LEVEL_LABELS = ['', 'Starter', 'Basic', 'Intermediate', 'Advanced', 'Mastery'];
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -79,6 +81,23 @@ const StudentDashboardWeb = () => {
           weekDays:             (b.weekDays && b.weekDays.some(d => d)) ? b.weekDays : local.weekDays,
           lastScreening:        b.lastScreening || local.lastScreening,
         };
+
+        const activeScreening = merged.lastScreening;
+        if (activeScreening?.ldType && user?.email) {
+          const formattedLdType = activeScreening.ldType.charAt(0).toUpperCase() + activeScreening.ldType.slice(1);
+          supabase.from('students').upsert([{
+            id: user.id || `st-${Date.now()}`,
+            name: user.name || user.email.split('@')[0],
+            email: user.email.toLowerCase(),
+            ld_type: formattedLdType,
+            severity: activeScreening.severity || 'Moderate',
+            screened: true,
+            level: 'Level 1',
+            status: 'active',
+            last_active: 'Today',
+            subscription: 'Free Tier',
+          }], { onConflict: 'email' }).then(() => {}).catch(() => {});
+        }
 
         setAnalytics(merged);
       })
