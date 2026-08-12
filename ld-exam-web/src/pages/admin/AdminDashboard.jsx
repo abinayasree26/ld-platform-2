@@ -47,18 +47,21 @@ const AdminDashboard = () => {
       supabase.from('test_attempts').select('*').then(res => res.data || []).catch(() => []),
     ]).then(([res, supaData, supaPractice, supaTests]) => {
         const overviewObj = res?.data || res || {};
+        const deletedEmails = new Set(JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]'));
+
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
-        const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com');
-        const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
+        const customStudents = rawStudents.filter(s => s.name !== 'Administrator' && s.name !== 'Admin User' && s.email !== 'student@gmail.com' && !deletedEmails.has(s.email?.toLowerCase()));
+        const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com' && !deletedEmails.has(sc.studentEmail?.toLowerCase()));
 
-        const supaScreenedEmails = supaData.filter(s => s.screened || (s.ld_type && s.ld_type !== 'Unscreened')).map(s => s.email?.toLowerCase()).filter(Boolean);
+        const supaFiltered = supaData.filter(s => !deletedEmails.has(s.email?.toLowerCase()));
+        const supaScreenedEmails = supaFiltered.filter(s => s.screened || (s.ld_type && s.ld_type !== 'Unscreened')).map(s => s.email?.toLowerCase()).filter(Boolean);
         const localScreenedEmails = customScreenings.map(sc => sc.studentEmail?.toLowerCase()).filter(Boolean);
         const uniqueScreenedEmails = new Set([...supaScreenedEmails, ...localScreenedEmails]);
 
         const uniqueStudentEmails = new Set([
-          ...supaData.map(s => s.email?.toLowerCase()).filter(Boolean),
+          ...supaFiltered.map(s => s.email?.toLowerCase()).filter(Boolean),
           ...customStudents.map(s => s.email?.toLowerCase()).filter(e => e && e !== 'student@gmail.com'),
           ...customScreenings.map(sc => sc.studentEmail?.toLowerCase()).filter(e => e && e !== 'student@gmail.com')
         ]);
@@ -71,22 +74,28 @@ const AdminDashboard = () => {
         const allScores = [...supaPractice.map(p => p.score_percent), ...supaTests.map(t => t.score_percent)].filter(n => typeof n === 'number');
         const realAvgAccuracy = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : (overviewObj.avgAccuracy || 0);
 
-        const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
+        // Deduplicate LD Type per unique student email
+        const studentLdMap = new Map();
+        supaFiltered.forEach(s => {
+          const email = s.email?.toLowerCase();
+          if (email && s.ld_type && s.ld_type !== 'Unscreened') {
+            studentLdMap.set(email, s.ld_type);
+          }
+        });
+        customScreenings.forEach(sc => {
+          const email = sc.studentEmail?.toLowerCase();
+          if (email && sc.ldType && !studentLdMap.has(email)) {
+            studentLdMap.set(email, sc.ldType);
+          }
+        });
 
-        supaData.forEach(s => {
-          const type = (s.ld_type || '').toLowerCase();
+        const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };
+        studentLdMap.forEach(ldType => {
+          const type = (ldType || '').toLowerCase();
           if (type.includes('dyslexia')) ldCounts.Dyslexia++;
           else if (type.includes('dyscalculia')) ldCounts.Dyscalculia++;
           else if (type.includes('dysgraphia')) ldCounts.Dysgraphia++;
           else if (type && type !== 'unscreened' && type !== 'pending') ldCounts.Mixed++;
-        });
-
-        customScreenings.forEach(sc => {
-          const type = (sc.ldType || '').toLowerCase();
-          if (type.includes('dyslexia')) ldCounts.Dyslexia++;
-          else if (type.includes('dyscalculia')) ldCounts.Dyscalculia++;
-          else if (type.includes('dysgraphia')) ldCounts.Dysgraphia++;
-          else if (type && type !== 'unscreened') ldCounts.Mixed++;
         });
 
         const ldDistribution = Object.entries(ldCounts)

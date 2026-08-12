@@ -514,13 +514,46 @@ const AdminStudents = () => {
 
   const handleBulkDelete = async () => {
     if (!window.confirm(`Delete ${selectedIds.length} selected students? This cannot be undone.`)) return;
-    const token = localStorage.getItem('auth_token');
-    for (const id of selectedIds) {
-      await fetch(`/api/admin/students/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    try {
+      const deletedEmails = JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]');
+      const newDeletedEmails = [...deletedEmails];
+
+      for (const id of selectedIds) {
+        const targetStudent = students.find(s => s.id === id);
+        const targetEmail = targetStudent?.email?.toLowerCase();
+
+        if (targetEmail) {
+          await supabase.from('students').delete().eq('email', targetEmail).catch(() => null);
+          await supabase.from('screening_results').delete().eq('student_email', targetEmail).catch(() => null);
+          await supabase.from('test_attempts').delete().eq('student_email', targetEmail).catch(() => null);
+          await supabase.from('practice_sessions').delete().eq('student_email', targetEmail).catch(() => null);
+
+          if (!newDeletedEmails.includes(targetEmail)) {
+            newDeletedEmails.push(targetEmail);
+          }
+        }
+        if (id) {
+          await supabase.from('students').delete().eq('id', id).catch(() => null);
+        }
+      }
+
+      localStorage.setItem('admin_deleted_student_emails', JSON.stringify(newDeletedEmails));
+
+      // Clean local storage lists
+      const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+      const updatedStudents = customStudents.filter(s => !selectedIds.includes(s.id) && !newDeletedEmails.includes(s.email?.toLowerCase()));
+      localStorage.setItem('admin_registered_students', JSON.stringify(updatedStudents));
+
+      const customScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
+      const updatedScreenings = customScreenings.filter(sc => !newDeletedEmails.includes(sc.studentEmail?.toLowerCase()));
+      localStorage.setItem('admin_custom_screening_results', JSON.stringify(updatedScreenings));
+
+      toast.success(`${selectedIds.length} student(s) deleted successfully`);
+      setSelectedIds([]);
+      fetchStudents();
+    } catch {
+      toast.error('Bulk delete failed');
     }
-    toast.success(`${selectedIds.length} students deleted`);
-    setSelectedIds([]);
-    fetchStudents();
   };
 
   const handleExportCSV = async () => {
@@ -749,6 +782,7 @@ const AdminStudents = () => {
                             {s.status === 'active' ? '🚫' : '✅'}
                           </button>
                           <button onClick={() => fetchStudentDetail(s.id)} title="Edit Profile" className="p-1.5 rounded-lg hover:bg-purple-50 text-purple-600 transition text-xs">✏️</button>
+                          <button onClick={() => handleDelete(s.id, s.name)} title="Delete Account" className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition text-xs">🗑️</button>
                         </div>
                       </td>
                     </tr>
