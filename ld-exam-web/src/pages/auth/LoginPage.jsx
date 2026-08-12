@@ -5,6 +5,8 @@ import useAuthStore from '../../services/authStore';
 import { authAPI, complianceAPI } from '../../services/api';
 import { trackLogin, trackDemoLogin } from '../../services/analytics';
 
+import { supabase } from '../../services/supabaseClient';
+
 const ConsentModal = ({ onAccept }) => (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
@@ -280,6 +282,22 @@ const LoginPage = () => {
         if (!existingEmails.has(newStudent.email.toLowerCase())) {
           localStorage.setItem('admin_registered_students', JSON.stringify([newStudent, ...stored]));
         }
+
+        // Real-time Cloud DB sync with Supabase
+        supabase.from('students').upsert([{
+          id: newStudent.id,
+          name: newStudent.name,
+          email: newStudent.email.toLowerCase(),
+          grade: newStudent.grade,
+          ld_type: newStudent.ldType,
+          severity: newStudent.severity,
+          level: newStudent.level,
+          status: newStudent.status,
+          last_active: 'Today',
+          subscription: newStudent.subscription,
+          screened: false,
+          created_at: new Date().toISOString(),
+        }], { onConflict: 'email' }).then(() => {}).catch(() => {});
       } catch { /* ignore */ }
 
       toast.success(`Account created! Welcome, ${user.name}!`);

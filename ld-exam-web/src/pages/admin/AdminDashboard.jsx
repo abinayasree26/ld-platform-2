@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
 import { adminAPI } from '../../services/api';
 
+import { supabase } from '../../services/supabaseClient';
+
 const LD_COLORS = ['#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981'];
 
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('en-IN'));
@@ -38,8 +40,10 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminAPI.getOverview()
-      .then((res) => {
+    Promise.all([
+      adminAPI.getOverview().catch(() => ({})),
+      supabase.from('students').select('email').then(res => res.data || []).catch(() => []),
+    ]).then(([res, supaData]) => {
         const overviewObj = res?.data || res || {};
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
@@ -48,21 +52,14 @@ const AdminDashboard = () => {
         const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         const uniqueStudentEmails = new Set([
+          ...supaData.map(s => s.email).filter(Boolean),
           ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
           ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
 
-        let apiStudentCount = 0;
-        if (typeof overviewObj.totalStudents === 'number' && overviewObj.totalStudents > 0) {
-          apiStudentCount = overviewObj.totalStudents;
-        } else if (Array.isArray(overviewObj.users)) {
-          const st = overviewObj.users.find(u => u.role === 'student');
-          if (st) apiStudentCount = Number(st.count) || 0;
-        }
-
-        const realTotalStudents = Math.max(uniqueStudentEmails.size, customStudents.length, customScreenings.length > 0 ? 1 : 0);
+        const realTotalStudents = uniqueStudentEmails.size;
         const uniqueScreenedEmails = new Set(customScreenings.map(sc => sc.studentEmail).filter(Boolean));
-        const screenedStudentCount = uniqueScreenedEmails.size > 0 ? uniqueScreenedEmails.size : (customScreenings.length > 0 ? 1 : 0);
+        const screenedStudentCount = uniqueScreenedEmails.size;
         const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
 
         const ldCounts = { Dyslexia: 0, Dyscalculia: 0, Dysgraphia: 0, Mixed: 0 };

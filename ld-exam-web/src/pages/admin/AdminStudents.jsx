@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
 
+import { supabase } from '../../services/supabaseClient';
+
 const LD_BADGE = {
   Dyslexia: 'bg-purple-50 text-purple-700',
   Dyscalculia: 'bg-blue-50 text-blue-700',
@@ -227,6 +229,30 @@ const AdminStudents = () => {
       });
       const data = await resp.json();
       let list = data.students || [];
+
+      try {
+        const { data: supaStudents } = await supabase.from('students').select('*').order('created_at', { ascending: false });
+        if (supaStudents && supaStudents.length > 0) {
+          const existingEmails = new Set(list.map(s => s.email));
+          const supaFormatted = supaStudents.map(s => ({
+            id: s.id,
+            name: s.name,
+            email: s.email,
+            grade: s.grade || 'Class 5',
+            ldType: s.ld_type || 'Unscreened',
+            severity: s.severity || 'Pending',
+            level: s.level || 'Level 1',
+            status: s.status || 'active',
+            joined: s.created_at ? s.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+            lastActive: s.last_active || 'Today',
+            subscription: s.subscription || 'Free Tier',
+            screened: s.screened || false,
+          })).filter(s => !existingEmails.has(s.email));
+
+          list = [...supaFormatted, ...list];
+        }
+      } catch { /* fallback */ }
+
       try {
         const rawCustomStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawCustomScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');

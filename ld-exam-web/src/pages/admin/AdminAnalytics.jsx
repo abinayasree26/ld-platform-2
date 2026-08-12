@@ -6,6 +6,8 @@ import {
 import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
 
+import { supabase } from '../../services/supabaseClient';
+
 const COLORS = ['#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981', '#EF4444'];
 
 const StatCard = ({ icon, label, value, sub, color = 'bg-blue-600' }) => (
@@ -25,9 +27,10 @@ const AdminAnalytics = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    fetch('/api/admin/analytics', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(resData => {
+    Promise.all([
+      fetch('/api/admin/analytics', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
+      supabase.from('students').select('email').then(res => res.data || []).catch(() => []),
+    ]).then(([resData, supaData]) => {
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
@@ -35,6 +38,7 @@ const AdminAnalytics = () => {
         const customScreenings = rawScreenings.filter(sc => sc.studentName !== 'Administrator' && sc.studentName !== 'Admin User' && sc.studentEmail !== 'student@gmail.com');
 
         const uniqueStudentEmails = new Set([
+          ...supaData.map(s => s.email).filter(Boolean),
           ...customStudents.map(s => s.email).filter(e => e && e !== 'student@gmail.com'),
           ...customScreenings.map(sc => sc.studentEmail).filter(e => e && e !== 'student@gmail.com')
         ]);
