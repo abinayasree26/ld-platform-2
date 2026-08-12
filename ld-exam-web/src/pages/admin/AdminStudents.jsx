@@ -224,11 +224,16 @@ const AdminStudents = () => {
       if (filterLevel !== 'all') params.set('level', filterLevel);
 
       const token = localStorage.getItem('auth_token');
-      const resp = await fetch(`/api/admin/students?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await resp.json();
-      let list = data.students || [];
+      let list = [];
+      try {
+        const resp = await fetch(`/api/admin/students?${params}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+        if (resp && resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          list = data.students || [];
+        }
+      } catch { /* ignore api fallback */ }
 
       try {
         const { data: supaStudents } = await supabase.from('students').select('*').order('created_at', { ascending: false });
