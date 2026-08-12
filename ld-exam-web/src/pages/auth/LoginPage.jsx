@@ -170,45 +170,33 @@ const LoginPage = () => {
         return;
       }
 
-      // Check registered students in localStorage or create instant fallback student session
+      // Check registered students in Supabase Cloud DB or localStorage
       const cleanEmail = email.trim().toLowerCase();
-      const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-      const foundStudent = customStudents.find(s => s.email?.toLowerCase() === cleanEmail);
+      let foundStudent = null;
+      try {
+        const { data: supaMatch } = await supabase.from('students').select('*').eq('email', cleanEmail).maybeSingle();
+        if (supaMatch && supaMatch.email) {
+          foundStudent = supaMatch;
+        }
+      } catch { /* fallback */ }
 
-      const user = foundStudent ? {
-        id: foundStudent.id,
-        name: foundStudent.name,
-        email: foundStudent.email,
-        role: 'student',
-      } : {
-        id: `st-${Date.now()}`,
-        name: cleanEmail.split('@')[0] || 'Student',
-        email: cleanEmail,
+      if (!foundStudent) {
+        const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
+        foundStudent = customStudents.find(s => s.email?.toLowerCase() === cleanEmail);
+      }
+
+      if (!foundStudent) {
+        toast.error('Account not found! Please register first.');
+        setTab('register');
+        return;
+      }
+
+      const user = {
+        id: foundStudent.id || `st-${Date.now()}`,
+        name: foundStudent.name || cleanEmail.split('@')[0],
+        email: foundStudent.email || cleanEmail,
         role: 'student',
       };
-
-      if (!foundStudent && user.name !== 'Administrator') {
-        try {
-          const newStudent = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            grade: 'Class 5',
-            ldType: 'Unscreened',
-            severity: 'Pending',
-            level: 'Level 1',
-            status: 'active',
-            joined: new Date().toISOString().slice(0, 10),
-            lastActive: 'Today',
-            subscription: 'Free Tier',
-            screened: false,
-          };
-          const existingEmails = new Set(customStudents.map(s => s.email?.toLowerCase()));
-          if (!existingEmails.has(newStudent.email.toLowerCase())) {
-            localStorage.setItem('admin_registered_students', JSON.stringify([newStudent, ...customStudents]));
-          }
-        } catch { /* ignore */ }
-      }
 
       setDemoAuth(user, 'demo-token');
       toast.success(`Welcome back, ${user.name}!`);
