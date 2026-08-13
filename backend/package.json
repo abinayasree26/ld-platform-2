@@ -1,5 +1,5 @@
-﻿{
-  "name": "LD Schools-api",
+{
+  "name": "ld-schools-api",
   "version": "1.0.0",
   "description": "LD Schools unified backend API",
   "main": "src/index.js",
