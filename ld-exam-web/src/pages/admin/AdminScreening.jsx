@@ -194,13 +194,15 @@ const AdminScreening = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Build LD distribution pie data from completed results
+  // Build LD distribution pie data from completed results (normalized to Title Case)
   const ldDistribution = results
     .filter(r => r.ldType)
     .reduce((acc, r) => {
-      const existing = acc.find(a => a.name === r.ldType);
+      const raw = String(r.ldType).trim();
+      const formattedName = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+      const existing = acc.find(a => a.name.toLowerCase() === formattedName.toLowerCase());
       if (existing) existing.value++;
-      else acc.push({ name: r.ldType, value: 1 });
+      else acc.push({ name: formattedName, value: 1 });
       return acc;
     }, []);
 
