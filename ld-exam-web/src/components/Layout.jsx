@@ -163,7 +163,7 @@ const Layout = ({ children }) => {
                 className="flex items-center gap-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-xl transition-all cursor-pointer shadow-md"
               >
                 <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold shadow">
-                  {(user?.name || 'Admin')[0].toUpperCase()}
+                  {(user?.role?.includes('admin') ? (user?.name || 'A') : 'A')[0].toUpperCase()}
                 </div>
                 <div className="flex flex-col text-left leading-tight">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-400">Admin</span>
@@ -180,7 +180,9 @@ const Layout = ({ children }) => {
                 >
                   {/* User Profile Card Header */}
                   <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-800/80">
-                    <p className="text-xs font-bold text-white tracking-tight">{user?.name && user.name !== 'Demo Student' ? user.name : 'Administrator'}</p>
+                    <p className="text-xs font-bold text-white tracking-tight">
+                      {user?.role?.includes('admin') ? (user?.name || 'Administrator') : 'Administrator'}
+                    </p>
                     <div className="mt-1.5 inline-flex items-center gap-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-md">
                       <span>🛡️</span> Full System Access
                     </div>
