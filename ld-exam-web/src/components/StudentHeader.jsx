@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../services/authStore';
+import { supabase } from '../services/supabaseClient';
 import { currentAvatarLevel } from '../data/avatarSystem';
 import LevelAvatar from './LevelAvatar';
 import useSidebarStore from '../services/sidebarStore';
@@ -62,19 +63,27 @@ const StudentHeader = ({ showBell = true }) => {
     { id: 2, title: 'Practice Level 1 Unlocked', desc: 'Keep practicing to earn your next badge!', time: '1 day ago' },
   ]);
 
-  const loadAnnouncements = () => {
+  const loadAnnouncements = async () => {
     try {
-      const customAnnouncements = JSON.parse(localStorage.getItem('admin_created_notifications') || '[]');
       const defaultNotes = [
         { id: 1, title: 'Screening Completed', desc: 'Your screening profile has been calculated.', time: 'Today' },
         { id: 2, title: 'Practice Level 1 Unlocked', desc: 'Keep practicing to earn your next badge!', time: '1 day ago' },
       ];
-      if (customAnnouncements.length > 0) {
-        const formatted = customAnnouncements.map((a, idx) => ({
-          id: a.id || `ann-${idx}`,
+
+      // Fetch announcements from Supabase notifications table
+      const { data: supaNotifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('status', 'sent')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (supaNotifs && supaNotifs.length > 0) {
+        const formatted = supaNotifs.map((a) => ({
+          id: a.id,
           title: `📢 ${a.title}`,
           desc: a.body || a.desc || 'New Announcement',
-          time: a.sentAt ? new Date(a.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+          time: a.sent_at ? new Date(a.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
           isAnnouncement: true
         }));
         setNotifications([...formatted, ...defaultNotes]);
@@ -86,7 +95,7 @@ const StudentHeader = ({ showBell = true }) => {
 
   useEffect(() => {
     loadAnnouncements();
-    const interval = setInterval(loadAnnouncements, 2000);
+    const interval = setInterval(loadAnnouncements, 10000);
     return () => clearInterval(interval);
   }, []);
 
