@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
-import { adminAPI } from '../../services/api';
+import { supabase } from '../../services/supabaseClient';
 import { trackCMSAction } from '../../services/analytics';
 
 const EXERCISE_TYPES = ['phonics', 'reading', 'writing', 'math', 'speaking'];
@@ -9,6 +9,7 @@ const LD_TARGETS = ['dyslexia', 'dysgraphia', 'dyscalculia', 'mixed'];
 const CATEGORIES = ['phonics', 'reading', 'writing', 'math'];
 const LEVELS = [1, 2, 3, 4, 5];
 const DIFFICULTIES = [1, 2, 3];
+const PAGE_SIZE = 20;
 
 const Badge = ({ children, color = 'bg-slate-100 text-[var(--text-muted)]' }) => (
   <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${color}`}>{children}</span>
@@ -245,39 +246,64 @@ const AdminCMS = () => {
   const [exercises, setExercises] = useState([]);
   const [qTotal, setQTotal] = useState(0);
   const [eTotal, setETotal] = useState(0);
-  const [qFilter, setQFilter] = useState({ level: '', page: 1 });
+  const [qFilter, setQFilter] = useState({ level: '', category: '', page: 1 });
   const [eFilter, setEFilter] = useState({ type: '', page: 1 });
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null); // null | { type: 'create-q' | 'edit-q' | 'create-e' | 'edit-e', data? }
 
+  // ─── Load Questions from Supabase ───────────────────────────────────────────
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     try {
-      const { questions: qs, total } = await adminAPI.getQuestions({
-        level: qFilter.level || undefined,
-        page: qFilter.page,
-        limit: 20,
-      });
-      setQuestions(qs || []);
-      setQTotal(total || 0);
-    } catch {
+      let query = supabase
+        .from('cms_content')
+        .select('*', { count: 'exact' })
+        .eq('content_type', 'question')
+        .order('created_at', { ascending: false });
+
+      if (qFilter.level) query = query.eq('level', Number(qFilter.level));
+      if (qFilter.category) query = query.eq('category', qFilter.category);
+
+      const from = (qFilter.page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+
+      setQuestions(data || []);
+      setQTotal(count || 0);
+    } catch (err) {
+      console.error('Load questions error:', err);
       toast.error('Could not load questions');
     } finally {
       setLoading(false);
     }
   }, [qFilter]);
 
+  // ─── Load Exercises from Supabase ───────────────────────────────────────────
   const loadExercises = useCallback(async () => {
     setLoading(true);
     try {
-      const { exercises: exs, total } = await adminAPI.getExercises({
-        type: eFilter.type || undefined,
-        page: eFilter.page,
-        limit: 20,
-      });
-      setExercises(exs || []);
-      setETotal(total || 0);
-    } catch {
+      let query = supabase
+        .from('cms_content')
+        .select('*', { count: 'exact' })
+        .eq('content_type', 'exercise')
+        .order('created_at', { ascending: false });
+
+      if (eFilter.type) query = query.eq('exercise_type', eFilter.type);
+
+      const from = (eFilter.page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      query = query.range(from, to);
+
+      const { data, count, error } = await query;
+      if (error) throw error;
+
+      setExercises(data || []);
+      setETotal(count || 0);
+    } catch (err) {
+      console.error('Load exercises error:', err);
       toast.error('Could not load exercises');
     } finally {
       setLoading(false);
@@ -287,80 +313,192 @@ const AdminCMS = () => {
   useEffect(() => { if (tab === 'questions') loadQuestions(); }, [tab, loadQuestions]);
   useEffect(() => { if (tab === 'exercises') loadExercises(); }, [tab, loadExercises]);
 
+  // ─── Delete Question ────────────────────────────────────────────────────────
   const deleteQuestion = async (id) => {
     if (!window.confirm('Delete this question? This cannot be undone.')) return;
     try {
-      await adminAPI.deleteQuestion(id);
+      const { error } = await supabase.from('cms_content').delete().eq('id', id);
+      if (error) throw error;
       toast.success('Question deleted');
+      trackCMSAction('delete', 'question');
       loadQuestions();
     } catch { toast.error('Delete failed'); }
   };
 
+  // ─── Delete Exercise ────────────────────────────────────────────────────────
   const deleteExercise = async (id) => {
     if (!window.confirm('Delete this exercise? This cannot be undone.')) return;
     try {
-      await adminAPI.deleteExercise(id);
+      const { error } = await supabase.from('cms_content').delete().eq('id', id);
+      if (error) throw error;
       toast.success('Exercise deleted');
+      trackCMSAction('delete', 'exercise');
       loadExercises();
     } catch { toast.error('Delete failed'); }
   };
 
+  // ─── Save Question (Create / Update) ───────────────────────────────────────
   const saveQuestion = async (data) => {
     try {
+      const row = {
+        id: modal?.data?.id || crypto.randomUUID(),
+        content_type: 'question',
+        level: Number(data.level),
+        category: data.category,
+        question_type: data.questionType,
+        question_text: data.questionText,
+        options: data.options,
+        correct_answer: data.correctAnswer,
+      };
+
       if (modal?.data?.id) {
-        await adminAPI.updateQuestion(modal.data.id, data);
+        // Update existing
+        const { error } = await supabase
+          .from('cms_content')
+          .update({ ...row, id: undefined })
+          .eq('id', modal.data.id);
+        if (error) throw error;
         trackCMSAction('update', 'question');
         toast.success('Question updated');
       } else {
-        await adminAPI.createQuestion(data);
+        // Create new
+        const { error } = await supabase
+          .from('cms_content')
+          .insert(row);
+        if (error) throw error;
         trackCMSAction('create', 'question');
         toast.success('Question created');
       }
       setModal(null);
       loadQuestions();
     } catch (err) {
-      toast.error(err?.error || 'Save failed');
+      console.error('Save question error:', err);
+      toast.error(err?.message || 'Save failed');
     }
   };
 
+  // ─── Save Exercise (Create / Update) ───────────────────────────────────────
   const saveExercise = async (data) => {
     try {
+      const row = {
+        id: modal?.data?.id || crypto.randomUUID(),
+        content_type: 'exercise',
+        level: Number(data.level),
+        exercise_type: data.exerciseType,
+        ld_target: data.ldTarget,
+        title: data.title,
+        instruction: data.instruction,
+        content: data.content,
+      };
+
       if (modal?.data?.id) {
-        await adminAPI.updateExercise(modal.data.id, data);
+        const { error } = await supabase
+          .from('cms_content')
+          .update({ ...row, id: undefined })
+          .eq('id', modal.data.id);
+        if (error) throw error;
         trackCMSAction('update', 'exercise');
         toast.success('Exercise updated');
       } else {
-        await adminAPI.createExercise(data);
+        const { error } = await supabase
+          .from('cms_content')
+          .insert(row);
+        if (error) throw error;
         trackCMSAction('create', 'exercise');
         toast.success('Exercise created');
       }
       setModal(null);
       loadExercises();
     } catch (err) {
-      toast.error(err?.error || 'Save failed');
+      console.error('Save exercise error:', err);
+      toast.error(err?.message || 'Save failed');
+    }
+  };
+
+  // ─── Bulk Import (JSON/CSV) ─────────────────────────────────────────────────
+  const handleBulkImport = async (file) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      let items = [];
+
+      if (file.name.endsWith('.json')) {
+        items = JSON.parse(text);
+        if (!Array.isArray(items)) items = [items];
+      } else if (file.name.endsWith('.csv')) {
+        // Simple CSV parse: first row = headers, rest = data
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(',').map(v => v.trim());
+          const obj = {};
+          headers.forEach((h, idx) => { obj[h] = vals[idx] || ''; });
+          items.push(obj);
+        }
+      }
+
+      if (!items.length) { toast.error('No items found in file'); return; }
+
+      // Determine type from data
+      const isExercise = items[0].exercise_type || items[0].exerciseType || items[0].title;
+
+      const rows = items.map(item => {
+        if (isExercise) {
+          return {
+            content_type: 'exercise',
+            level: Number(item.level) || 1,
+            exercise_type: item.exercise_type || item.exerciseType || 'phonics',
+            ld_target: item.ld_target || item.ldTarget || 'dyslexia',
+            title: item.title || '',
+            instruction: item.instruction || '',
+            content: typeof item.content === 'string' ? JSON.parse(item.content) : (item.content || {}),
+          };
+        } else {
+          return {
+            content_type: 'question',
+            level: Number(item.level) || 1,
+            category: item.category || 'phonics',
+            question_type: item.question_type || item.questionType || 'mcq',
+            question_text: item.question_text || item.questionText || '',
+            options: typeof item.options === 'string' ? JSON.parse(item.options) : (item.options || []),
+            correct_answer: item.correct_answer || item.correctAnswer || '',
+          };
+        }
+      });
+
+      const { error } = await supabase.from('cms_content').insert(rows);
+      if (error) throw error;
+
+      toast.success(`Imported ${rows.length} ${isExercise ? 'exercises' : 'questions'} successfully!`);
+      trackCMSAction('bulk_import', isExercise ? 'exercise' : 'question');
+      if (tab === 'questions') loadQuestions(); else loadExercises();
+    } catch (err) {
+      console.error('Import error:', err);
+      toast.error('Import failed: ' + (err?.message || 'Invalid file format'));
     }
   };
 
   return (
     <Layout>
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="mb-8">
           <div className="flex items-end justify-between">
             <div>
               <h2 className="text-2xl font-black text-[var(--text-main)]">Content Management</h2>
-              <p className="text-slate-500 text-sm mt-1">Manage screening questions, test questions, and practice exercises</p>
+              <p className="text-slate-500 text-sm mt-1">Manage test questions and practice exercises</p>
             </div>
             <div className="flex gap-2">
               <input type="file" id="cms-import" accept=".csv,.json" className="hidden" onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) { toast.success(`File "${file.name}" selected — importing (demo)`); e.target.value = ''; }
+                if (file) { handleBulkImport(file); e.target.value = ''; }
               }} />
               <button onClick={() => document.getElementById('cms-import').click()}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition">
                 📥 Bulk Upload
               </button>
               <button onClick={() => {
-                const blob = new Blob([JSON.stringify(tab === 'questions' ? questions : exercises, null, 2)], { type: 'application/json' });
+                const exportData = tab === 'questions' ? questions : exercises;
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
                 a.download = `${tab}_export_${new Date().toISOString().slice(0,10)}.json`; a.click();
                 toast.success('Exported!');
@@ -387,10 +525,15 @@ const AdminCMS = () => {
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex gap-3 items-center">
-                <select value={qFilter.level} onChange={(e) => setQFilter({ level: e.target.value, page: 1 })}
+                <select value={qFilter.level} onChange={(e) => setQFilter({ ...qFilter, level: e.target.value, page: 1 })}
                   className="border border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] rounded-lg px-3 py-1.5 text-sm">
                   <option value="">All Levels</option>
                   {LEVELS.map((l) => <option key={l} value={l}>Level {l}</option>)}
+                </select>
+                <select value={qFilter.category} onChange={(e) => setQFilter({ ...qFilter, category: e.target.value, page: 1 })}
+                  className="border border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] rounded-lg px-3 py-1.5 text-sm capitalize">
+                  <option value="">All Categories</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <span className="text-xs text-[var(--text-muted)]">{qTotal} total</span>
               </div>
@@ -403,8 +546,8 @@ const AdminCMS = () => {
             {loading ? (
               <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
             ) : (
-              <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden bg-[var(--bg-card)] shadow-sm">
-                <table className="w-full text-sm">
+              <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden bg-[var(--bg-card)] shadow-sm overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead className="bg-[var(--bg-main)] border-b border-[var(--border-main)]">
                     <tr>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Question</th>
@@ -417,18 +560,20 @@ const AdminCMS = () => {
                   <tbody className="divide-y divide-slate-50">
                     {questions.map((q) => (
                       <tr key={q.id} className="hover:bg-[var(--bg-main)] transition">
-                        <td className="px-4 py-3 font-medium text-[var(--text-main)] max-w-xs truncate">{q.questionText || q.question_text}</td>
+                        <td className="px-4 py-3 font-medium text-[var(--text-main)] max-w-xs truncate">{q.question_text}</td>
                         <td className="px-4 py-3"><Badge>L{q.level}</Badge></td>
                         <td className="px-4 py-3"><Badge color={TYPE_COLORS[q.category]}>{q.category}</Badge></td>
-                        <td className="px-4 py-3 text-[var(--text-muted)] truncate max-w-[7rem]">{q.correctAnswer || q.correct_answer}</td>
+                        <td className="px-4 py-3 text-[var(--text-muted)] truncate max-w-[7rem]">{q.correct_answer}</td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => setModal({ type: 'edit-q', data: {
-                              ...q,
-                              questionText: q.questionText || q.question_text,
-                              questionType: q.questionType || q.question_type || 'mcq',
-                              correctAnswer: q.correctAnswer || q.correct_answer,
-                              options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+                              id: q.id,
+                              questionText: q.question_text,
+                              questionType: q.question_type || 'mcq',
+                              correctAnswer: q.correct_answer,
+                              options: Array.isArray(q.options) ? q.options : [],
+                              level: q.level,
+                              category: q.category,
                             }})} className="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
                             <button onClick={() => deleteQuestion(q.id)} className="text-red-500 hover:underline text-xs font-semibold">Del</button>
                           </div>
@@ -436,7 +581,7 @@ const AdminCMS = () => {
                       </tr>
                     ))}
                     {!questions.length && (
-                      <tr><td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">No questions yet</td></tr>
+                      <tr><td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">No questions yet — click "+ New Question" to add one</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -444,12 +589,12 @@ const AdminCMS = () => {
             )}
 
             {/* Pagination */}
-            {qTotal > 20 && (
+            {qTotal > PAGE_SIZE && (
               <div className="flex justify-center gap-3 mt-4">
                 <button disabled={qFilter.page <= 1} onClick={() => setQFilter((f) => ({ ...f, page: f.page - 1 }))}
                   className="px-3 py-1.5 rounded-lg border border-[var(--border-main)] text-sm disabled:opacity-40">← Prev</button>
-                <span className="text-sm text-slate-500 self-center">Page {qFilter.page}</span>
-                <button disabled={qFilter.page * 20 >= qTotal} onClick={() => setQFilter((f) => ({ ...f, page: f.page + 1 }))}
+                <span className="text-sm text-slate-500 self-center">Page {qFilter.page} of {Math.ceil(qTotal / PAGE_SIZE)}</span>
+                <button disabled={qFilter.page * PAGE_SIZE >= qTotal} onClick={() => setQFilter((f) => ({ ...f, page: f.page + 1 }))}
                   className="px-3 py-1.5 rounded-lg border border-[var(--border-main)] text-sm disabled:opacity-40">Next →</button>
               </div>
             )}
@@ -477,8 +622,8 @@ const AdminCMS = () => {
             {loading ? (
               <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
             ) : (
-              <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden bg-[var(--bg-card)] shadow-sm">
-                <table className="w-full text-sm">
+              <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden bg-[var(--bg-card)] shadow-sm overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead className="bg-[var(--bg-main)] border-b border-[var(--border-main)]">
                     <tr>
                       <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Title</th>
@@ -493,18 +638,21 @@ const AdminCMS = () => {
                       <tr key={ex.id} className="hover:bg-[var(--bg-main)] transition">
                         <td className="px-4 py-3 font-medium text-[var(--text-main)]">
                           <div className="text-[var(--text-main)] font-medium">{ex.title}</div>
-                          <div className="text-xs text-[var(--text-muted)] truncate max-w-xs">{ex.instruction || ex.description}</div>
+                          <div className="text-xs text-[var(--text-muted)] truncate max-w-xs">{ex.instruction}</div>
                         </td>
-                        <td className="px-4 py-3"><Badge color={TYPE_COLORS[ex.type || ex.exercise_type]}>{ex.type || ex.exercise_type}</Badge></td>
-                        <td className="px-4 py-3 text-[var(--text-muted)] text-xs capitalize">{(ex.ldTarget || ex.ld_target || '').replace('_', ' ')}</td>
+                        <td className="px-4 py-3"><Badge color={TYPE_COLORS[ex.exercise_type]}>{ex.exercise_type}</Badge></td>
+                        <td className="px-4 py-3 text-[var(--text-muted)] text-xs capitalize">{(ex.ld_target || '').replace('_', ' ')}</td>
                         <td className="px-4 py-3"><Badge>L{ex.level}</Badge></td>
                         <td className="px-4 py-3">
                           <div className="flex gap-2 justify-end">
                             <button onClick={() => setModal({ type: 'edit-e', data: {
-                              ...ex,
+                              id: ex.id,
                               exerciseType: ex.exercise_type,
                               ldTarget: ex.ld_target,
-                              content: typeof ex.content === 'string' ? ex.content : JSON.stringify(ex.content, null, 2),
+                              level: ex.level,
+                              title: ex.title,
+                              instruction: ex.instruction,
+                              content: JSON.stringify(ex.content || {}, null, 2),
                             }})} className="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
                             <button onClick={() => deleteExercise(ex.id)} className="text-red-500 hover:underline text-xs font-semibold">Del</button>
                           </div>
@@ -512,19 +660,20 @@ const AdminCMS = () => {
                       </tr>
                     ))}
                     {!exercises.length && (
-                      <tr><td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">No exercises yet</td></tr>
+                      <tr><td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">No exercises yet — click "+ New Exercise" to add one</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
             )}
 
-            {eTotal > 20 && (
+            {/* Pagination */}
+            {eTotal > PAGE_SIZE && (
               <div className="flex justify-center gap-3 mt-4">
                 <button disabled={eFilter.page <= 1} onClick={() => setEFilter((f) => ({ ...f, page: f.page - 1 }))}
                   className="px-3 py-1.5 rounded-lg border border-[var(--border-main)] text-sm disabled:opacity-40">← Prev</button>
-                <span className="text-sm text-slate-500 self-center">Page {eFilter.page}</span>
-                <button disabled={eFilter.page * 20 >= eTotal} onClick={() => setEFilter((f) => ({ ...f, page: f.page + 1 }))}
+                <span className="text-sm text-slate-500 self-center">Page {eFilter.page} of {Math.ceil(eTotal / PAGE_SIZE)}</span>
+                <button disabled={eFilter.page * PAGE_SIZE >= eTotal} onClick={() => setEFilter((f) => ({ ...f, page: f.page + 1 }))}
                   className="px-3 py-1.5 rounded-lg border border-[var(--border-main)] text-sm disabled:opacity-40">Next →</button>
               </div>
             )}
@@ -533,14 +682,23 @@ const AdminCMS = () => {
       </div>
 
       {/* Modals */}
-      {(modal?.type === 'create-q' || modal?.type === 'edit-q') && (
-        <Modal title={modal.type === 'edit-q' ? 'Edit Question' : 'New Question'} onClose={() => setModal(null)}>
+      {modal?.type === 'create-q' && (
+        <Modal title="New Question" onClose={() => setModal(null)}>
+          <QuestionForm onSave={saveQuestion} onCancel={() => setModal(null)} />
+        </Modal>
+      )}
+      {modal?.type === 'edit-q' && (
+        <Modal title="Edit Question" onClose={() => setModal(null)}>
           <QuestionForm initial={modal.data} onSave={saveQuestion} onCancel={() => setModal(null)} />
         </Modal>
       )}
-
-      {(modal?.type === 'create-e' || modal?.type === 'edit-e') && (
-        <Modal title={modal.type === 'edit-e' ? 'Edit Exercise' : 'New Exercise'} onClose={() => setModal(null)}>
+      {modal?.type === 'create-e' && (
+        <Modal title="New Exercise" onClose={() => setModal(null)}>
+          <ExerciseForm onSave={saveExercise} onCancel={() => setModal(null)} />
+        </Modal>
+      )}
+      {modal?.type === 'edit-e' && (
+        <Modal title="Edit Exercise" onClose={() => setModal(null)}>
           <ExerciseForm initial={modal.data} onSave={saveExercise} onCancel={() => setModal(null)} />
         </Modal>
       )}
