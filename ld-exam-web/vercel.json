@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://ld-platform-2.onrender.com/api/:path*"
+    },
+    {
       "source": "/((?!assets|favicon.ico|manifest.webmanifest|icons).*)",
       "destination": "/index.html"
     }
