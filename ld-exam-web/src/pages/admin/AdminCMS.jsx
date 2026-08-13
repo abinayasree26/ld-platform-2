@@ -341,9 +341,10 @@ const AdminCMS = () => {
   const saveQuestion = async (data) => {
     try {
       const row = {
-        id: modal?.data?.id || crypto.randomUUID(),
+        id: modal?.data?.id || `q_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         content_type: 'question',
         level: Number(data.level),
+        title: data.questionText?.slice(0, 100) || 'Untitled Question',
         category: data.category,
         question_type: data.questionType,
         question_text: data.questionText,
@@ -353,9 +354,10 @@ const AdminCMS = () => {
 
       if (modal?.data?.id) {
         // Update existing
+        const { id, ...updateRow } = row;
         const { error } = await supabase
           .from('cms_content')
-          .update({ ...row, id: undefined })
+          .update(updateRow)
           .eq('id', modal.data.id);
         if (error) throw error;
         trackCMSAction('update', 'question');
@@ -381,7 +383,7 @@ const AdminCMS = () => {
   const saveExercise = async (data) => {
     try {
       const row = {
-        id: modal?.data?.id || crypto.randomUUID(),
+        id: modal?.data?.id || `ex_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         content_type: 'exercise',
         level: Number(data.level),
         exercise_type: data.exerciseType,
@@ -392,9 +394,10 @@ const AdminCMS = () => {
       };
 
       if (modal?.data?.id) {
+        const { id, ...updateRow } = row;
         const { error } = await supabase
           .from('cms_content')
-          .update({ ...row, id: undefined })
+          .update(updateRow)
           .eq('id', modal.data.id);
         if (error) throw error;
         trackCMSAction('update', 'exercise');
