@@ -180,7 +180,7 @@ const Layout = ({ children }) => {
                 >
                   {/* User Profile Card Header */}
                   <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-800/80">
-                    <p className="text-xs font-bold text-white tracking-tight">{user?.name || 'Admin User'}</p>
+                    <p className="text-xs font-bold text-white tracking-tight">{user?.name && user.name !== 'Demo Student' ? user.name : 'Administrator'}</p>
                     <div className="mt-1.5 inline-flex items-center gap-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded-md">
                       <span>🛡️</span> Full System Access
                     </div>
