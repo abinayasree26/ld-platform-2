@@ -111,7 +111,7 @@ const HelpSupportPage = () => {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
 
-  const loadChatHistory = () => {
+  const loadChatHistory = async () => {
     const studentInfo = getStudentInfo();
     const emailKey = (studentInfo.email || '').toLowerCase();
     const nameKey = (studentInfo.name || '').toLowerCase();
@@ -147,6 +147,30 @@ const HelpSupportPage = () => {
       }))
     ];
 
+    // 3b. Also fetch messages from Supabase support_messages
+    try {
+      const chatId = `chat_${emailKey.replace(/[^a-z0-9]/g, '_')}`;
+      const { data: supaMessages } = await supabase
+        .from('support_messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+
+      if (supaMessages && supaMessages.length > 0) {
+        supaMessages.forEach(m => {
+          const exists = items.some(i => i.id === m.id);
+          if (!exists) {
+            items.push({
+              id: m.id,
+              from: m.sender === 'admin' ? 'admin' : 'user',
+              text: m.text,
+              timestamp: m.created_at || new Date().toISOString(),
+            });
+          }
+        });
+      }
+    } catch { /* ignore */ }
+
     items.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
     const initialGreeting = {
@@ -161,7 +185,7 @@ const HelpSupportPage = () => {
 
   useEffect(() => {
     loadChatHistory();
-    const interval = setInterval(loadChatHistory, 1000);
+    const interval = setInterval(loadChatHistory, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -181,6 +205,8 @@ const HelpSupportPage = () => {
     if (!text) return;
     try {
       const studentInfo = getStudentInfo();
+      const cleanEmail = (studentInfo.email || 'student@gmail.com').toLowerCase();
+      const chatId = `chat_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
       const newMsg = {
         id: `chat-${Date.now()}`,
         studentName: studentInfo.name,
@@ -192,6 +218,31 @@ const HelpSupportPage = () => {
       };
       const existing = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
       localStorage.setItem('admin_support_messages', JSON.stringify([newMsg, ...existing]));
+
+      // ─── Also save to Supabase support_chats & support_messages ───
+      (async () => {
+        try {
+          const { data: existingChat } = await supabase.from('support_chats').select('*').eq('id', chatId).single();
+          const unreadCount = (existingChat?.unread || 0) + 1;
+
+          await supabase.from('support_chats').upsert({
+            id: chatId,
+            student_name: studentInfo.name || 'Student',
+            student_email: cleanEmail,
+            status: 'open',
+            last_message: text,
+            unread: unreadCount,
+            updated_at: new Date().toISOString(),
+          });
+
+          await supabase.from('support_messages').insert({
+            id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            chat_id: chatId,
+            sender: 'student',
+            text: text,
+          });
+        } catch { /* ignore supabase fallback */ }
+      })();
 
       fetch('/api/ld/messages', {
         method: 'POST',
