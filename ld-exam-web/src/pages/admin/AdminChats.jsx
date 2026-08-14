@@ -163,10 +163,25 @@ const AdminChats = () => {
     } catch { toast.error('Failed to reopen'); }
   };
 
+  // ─── Delete chat ────────────────────────────────────────────────────────────
+  const deleteChat = async (chatId) => {
+    if (!window.confirm('Delete this conversation permanently?')) return;
+    try {
+      // Delete messages first (foreign key)
+      await supabase.from('support_messages').delete().eq('chat_id', chatId);
+      await supabase.from('support_chats').delete().eq('id', chatId);
+      toast.success('Chat deleted');
+      setChats(prev => prev.filter(c => c.id !== chatId));
+      if (selectedChat === chatId) { setSelectedChat(null); setChatDetail(null); setMessages([]); }
+      setUnreadTotal(prev => Math.max(0, prev - 1));
+    } catch { toast.error('Delete failed'); }
+  };
+
   useEffect(() => { fetchChats(); }, []);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const filteredChats = statusFilter === 'all' ? chats : chats.filter(c => c.status === statusFilter);
+  const filteredChats = (statusFilter === 'all' ? chats : chats.filter(c => c.status === statusFilter))
+    .filter(c => c.last_message && c.last_message.trim() !== '');
 
   const formatTime = (iso) => {
     if (!iso) return '';
@@ -236,6 +251,10 @@ const AdminChats = () => {
                     <span className="text-[9px] text-[var(--text-muted)]">{chat.student_email}</span>
                     <span className="text-[9px] text-[var(--text-muted)]">{formatTime(chat.updated_at)}</span>
                   </div>
+                  <div className="flex justify-end mt-1">
+                    <button onClick={(e) => { e.stopPropagation(); deleteChat(chat.id); }}
+                      className="text-[9px] text-red-400 hover:text-red-600 font-bold">🗑 Delete</button>
+                  </div>
                 </button>
               ))
             )}
@@ -284,9 +303,13 @@ const AdminChats = () => {
                     </button>
                   ) : (
                     <button onClick={reopenChat} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition">
-                      ↩ Reopen
+                    ↩ Reopen
                     </button>
                   )}
+                  <button onClick={() => deleteChat(selectedChat)}
+                    className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition">
+                    🗑 Delete
+                  </button>
                 </div>
               </div>
 
