@@ -62,7 +62,7 @@ const AdminChats = () => {
       } catch { /* ignore */ }
 
       setChats(list);
-      setUnreadTotal(list.filter(c => c.unread > 0).length);
+      setUnreadTotal(list.filter(c => c.unread > 0 && c.last_message && c.last_message.trim() !== '').length);
 
       // Auto-select first chat
       if (list.length > 0 && !selectedChat) {
