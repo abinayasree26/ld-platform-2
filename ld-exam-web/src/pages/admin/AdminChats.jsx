@@ -251,10 +251,6 @@ const AdminChats = () => {
                     <span className="text-[9px] text-[var(--text-muted)]">{chat.student_email}</span>
                     <span className="text-[9px] text-[var(--text-muted)]">{formatTime(chat.updated_at)}</span>
                   </div>
-                  <div className="flex justify-end mt-1">
-                    <button onClick={(e) => { e.stopPropagation(); deleteChat(chat.id); }}
-                      className="text-[9px] text-red-400 hover:text-red-600 font-bold">🗑 Delete</button>
-                  </div>
                 </button>
               ))
             )}
@@ -306,9 +302,9 @@ const AdminChats = () => {
                     ↩ Reopen
                     </button>
                   )}
-                  <button onClick={() => deleteChat(selectedChat)}
-                    className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition">
-                    🗑 Delete
+                  <button onClick={() => { setSelectedChat(null); setChatDetail(null); setMessages([]); }}
+                    className="px-3 py-1.5 bg-slate-500 text-white text-xs font-bold rounded-lg hover:bg-slate-600 transition">
+                    ✕ Close
                   </button>
                 </div>
               </div>
