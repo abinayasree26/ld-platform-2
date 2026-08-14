@@ -6,6 +6,7 @@ import useAuthStore from '../../../services/authStore';
 import StudentSidebar from '../../../components/StudentSidebar';
 import StudentHeader from '../../../components/StudentHeader';
 import AboutIcon from '../../../components/AboutIcon';
+import { supabase } from '../../../services/supabaseClient';
 
 const card = { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
 
@@ -45,18 +46,22 @@ const HelpSupportPage = () => {
     return { name, email };
   };
 
-  const submitMessage = (e) => {
+  const submitMessage = async (e) => {
     e.preventDefault();
     if (!message.trim()) { toast.error('Please describe your issue first'); return; }
     setSending(true);
 
     try {
       const studentInfo = getStudentInfo();
+      const textMsg = message.trim();
+      const cleanEmail = (studentInfo.email || 'student@gmail.com').toLowerCase();
+      const chatId = `chat_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
+
       const newMsg = {
         id: `msg-${Date.now()}`,
         studentName: studentInfo.name,
         studentEmail: studentInfo.email,
-        message: message.trim(),
+        message: textMsg,
         timestamp: new Date().toISOString(),
         status: 'unread',
         topic: 'General Inquiry',
@@ -64,10 +69,33 @@ const HelpSupportPage = () => {
       const existing = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
       localStorage.setItem('admin_support_messages', JSON.stringify([newMsg, ...existing]));
 
+      // ─── Upsert to Supabase Cloud DB support_chats & support_messages ───
+      try {
+        const { data: existingChat } = await supabase.from('support_chats').select('*').eq('id', chatId).single();
+        const unreadCount = (existingChat?.unread || 0) + 1;
+
+        await supabase.from('support_chats').upsert({
+          id: chatId,
+          student_name: studentInfo.name || 'Student',
+          student_email: cleanEmail,
+          status: 'open',
+          unread: unreadCount,
+          updated_at: new Date().toISOString(),
+        });
+
+        await supabase.from('support_messages').insert({
+          id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          chat_id: chatId,
+          sender: 'student',
+          text: textMsg,
+          created_at: new Date().toISOString(),
+        });
+      } catch { /* ignore supa fallback */ }
+
       fetch('/api/ld/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
-        body: JSON.stringify({ body: message.trim() }),
+        body: JSON.stringify({ body: textMsg }),
       }).catch(() => { /* ignore */ });
     } catch { /* ignore */ }
 

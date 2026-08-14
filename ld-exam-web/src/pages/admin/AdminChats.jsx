@@ -31,9 +31,36 @@ const AdminChats = () => {
         .select('*')
         .order('updated_at', { ascending: false });
 
-      if (error) throw error;
+      let list = data || [];
 
-      const list = data || [];
+      // Combine with local custom messages fallback
+      try {
+        const localMsgs = JSON.parse(localStorage.getItem('admin_support_messages') || '[]');
+        if (localMsgs.length > 0) {
+          const existingChatIds = new Set(list.map(c => c.id));
+          const existingEmails = new Set(list.map(c => (c.student_email || '').toLowerCase()));
+
+          localMsgs.forEach(m => {
+            const cleanEmail = (m.studentEmail || 'student@gmail.com').toLowerCase();
+            const chatId = `chat_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
+            if (!existingChatIds.has(chatId) && !existingEmails.has(cleanEmail)) {
+              existingChatIds.add(chatId);
+              existingEmails.add(cleanEmail);
+              list.push({
+                id: chatId,
+                student_name: m.studentName || 'Student',
+                student_email: cleanEmail,
+                ld_type: 'Dyslexia',
+                severity: 'Moderate',
+                status: 'open',
+                unread: 1,
+                updated_at: m.timestamp || new Date().toISOString(),
+              });
+            }
+          });
+        }
+      } catch { /* ignore */ }
+
       setChats(list);
       setUnreadTotal(list.filter(c => c.unread > 0).length);
 
