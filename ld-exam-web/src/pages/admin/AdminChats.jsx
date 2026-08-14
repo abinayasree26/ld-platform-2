@@ -278,41 +278,41 @@ const AdminChats = () => {
           ) : chatDetail ? (
             <>
               {/* Chat Header */}
-              <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-[var(--border-main)] bg-[var(--bg-card)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 flex-shrink-0">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <button onClick={() => { setSelectedChat(null); setChatDetail(null); }} className="lg:hidden text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold">
+              <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-[var(--border-main)] bg-[var(--bg-card)] flex items-center justify-between gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <button onClick={() => { setSelectedChat(null); setChatDetail(null); }} className="lg:hidden text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold shrink-0">
                     ← Back
                   </button>
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-xs sm:text-sm font-bold shrink-0">
                     {chatDetail.student_name?.charAt(0)?.toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-[var(--text-main)]">{chatDetail.student_name}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-[var(--text-muted)]">{chatDetail.student_email}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-bold text-[var(--text-main)] truncate">{chatDetail.student_name}</p>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] sm:text-[10px] text-[var(--text-muted)] truncate">{chatDetail.student_email}</span>
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${chatDetail.status === 'open' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         {chatDetail.status}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <div className="flex gap-1 sm:gap-2 shrink-0">
                   {chatDetail.status === 'open' ? (
-                    <button onClick={resolveChat} className="px-2 sm:px-3 py-1 sm:py-1.5 bg-emerald-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-emerald-700 transition">
-                      ✓ Resolve
+                    <button onClick={resolveChat} title="Resolve" className="w-7 h-7 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 bg-emerald-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-emerald-700 transition flex items-center justify-center">
+                      <span className="hidden sm:inline">✓ Resolve</span><span className="sm:hidden">✓</span>
                     </button>
                   ) : (
-                    <button onClick={reopenChat} className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-blue-700 transition">
-                    ↩ Reopen
+                    <button onClick={reopenChat} title="Reopen" className="w-7 h-7 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 bg-blue-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
+                      <span className="hidden sm:inline">↩ Reopen</span><span className="sm:hidden">↩</span>
                     </button>
                   )}
                   <button onClick={() => { setSelectedChat(null); setChatDetail(null); setMessages([]); }}
-                    className="px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-500 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-slate-600 transition">
-                    ✕ Close
+                    title="Close" className="w-7 h-7 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 bg-slate-500 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-slate-600 transition flex items-center justify-center">
+                    <span className="hidden sm:inline">✕ Close</span><span className="sm:hidden">✕</span>
                   </button>
                   <button onClick={() => deleteChat(selectedChat)}
-                    className="px-2 sm:px-3 py-1 sm:py-1.5 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-red-600 transition">
-                    🗑 Delete
+                    title="Delete" className="w-7 h-7 sm:w-auto sm:h-auto sm:px-3 sm:py-1.5 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-red-600 transition flex items-center justify-center">
+                    <span className="hidden sm:inline">🗑 Delete</span><span className="sm:hidden">🗑</span>
                   </button>
                 </div>
               </div>
