@@ -94,6 +94,10 @@ const AdminChats = () => {
       // Mark as read
       await supabase.from('support_chats').update({ unread: 0 }).eq('id', chatId);
       setChats(prev => prev.map(c => c.id === chatId ? { ...c, unread: 0 } : c));
+      setUnreadTotal(prev => {
+        const chat = chats.find(c => c.id === chatId);
+        return Math.max(0, prev - (chat?.unread || 0));
+      });
     } catch (err) {
       console.error('Load messages error:', err);
     } finally {
@@ -305,6 +309,10 @@ const AdminChats = () => {
                   <button onClick={() => { setSelectedChat(null); setChatDetail(null); setMessages([]); }}
                     className="px-3 py-1.5 bg-slate-500 text-white text-xs font-bold rounded-lg hover:bg-slate-600 transition">
                     ✕ Close
+                  </button>
+                  <button onClick={() => deleteChat(selectedChat)}
+                    className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition">
+                    🗑 Delete
                   </button>
                 </div>
               </div>
