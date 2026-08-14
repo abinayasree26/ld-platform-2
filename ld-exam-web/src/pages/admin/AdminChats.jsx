@@ -278,9 +278,9 @@ const AdminChats = () => {
           ) : chatDetail ? (
             <>
               {/* Chat Header */}
-              <div className="px-6 py-3 border-b border-[var(--border-main)] bg-[var(--bg-card)] flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <button onClick={() => { setSelectedChat(null); setChatDetail(null); }} className="lg:hidden text-[var(--text-muted)] hover:text-[var(--text-main)] text-sm font-bold mr-2">
+              <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-[var(--border-main)] bg-[var(--bg-card)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <button onClick={() => { setSelectedChat(null); setChatDetail(null); }} className="lg:hidden text-[var(--text-muted)] hover:text-[var(--text-main)] text-xs font-bold">
                     ← Back
                   </button>
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
@@ -296,22 +296,22 @@ const AdminChats = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {chatDetail.status === 'open' ? (
-                    <button onClick={resolveChat} className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition">
+                    <button onClick={resolveChat} className="px-2 sm:px-3 py-1 sm:py-1.5 bg-emerald-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-emerald-700 transition">
                       ✓ Resolve
                     </button>
                   ) : (
-                    <button onClick={reopenChat} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition">
+                    <button onClick={reopenChat} className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-blue-700 transition">
                     ↩ Reopen
                     </button>
                   )}
                   <button onClick={() => { setSelectedChat(null); setChatDetail(null); setMessages([]); }}
-                    className="px-3 py-1.5 bg-slate-500 text-white text-xs font-bold rounded-lg hover:bg-slate-600 transition">
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-500 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-slate-600 transition">
                     ✕ Close
                   </button>
                   <button onClick={() => deleteChat(selectedChat)}
-                    className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition">
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 bg-red-500 text-white text-[10px] sm:text-xs font-bold rounded-lg hover:bg-red-600 transition">
                     🗑 Delete
                   </button>
                 </div>
