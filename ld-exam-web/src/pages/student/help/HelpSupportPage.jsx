@@ -79,6 +79,7 @@ const HelpSupportPage = () => {
           student_name: studentInfo.name || 'Student',
           student_email: cleanEmail,
           status: 'open',
+          last_message: textMsg,
           unread: unreadCount,
           updated_at: new Date().toISOString(),
         });
