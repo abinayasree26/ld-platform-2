@@ -1,0 +1,95 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "LD Support Platform Unified API Specification",
+    "version": "1.0.0",
+    "description": "Shared API contracts between Admin Module and Student Module"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Development / Demo Backend Server"
+    }
+  ],
+  "paths": {
+    "/api/auth/credentials": {
+      "post": {
+        "summary": "Admin / Staff Authentication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "password": { "type": "string" }
+                },
+                "required": ["username", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JWT Token & User Profile Returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "role": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ld/screening": {
+      "get": {
+        "summary": "Fetch Student Screening Questions / Results",
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "ldType", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Screening Results List" }
+        }
+      }
+    },
+    "/api/ld/notifications/broadcast": {
+      "post": {
+        "summary": "Dispatch FCM Push Broadcast Notification",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "body": { "type": "string" },
+                  "targetRole": { "type": "string" }
+                },
+                "required": ["title", "body"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "FCM Push Dispatch Result" }
+        }
+      }
+    }
+  }
+}
