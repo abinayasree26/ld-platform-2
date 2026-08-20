@@ -5,7 +5,6 @@ import useSidebarStore from '../services/sidebarStore';
 const NAV_ITEMS = [
   { icon: '📊', label: 'My Dashboard', path: '/student' },
   { icon: '🧠', label: 'Screening', path: '/student/screening' },
-  { icon: '✨', label: 'Practice', path: '/student/practice' },
   { icon: '📝', label: 'Tests', path: '/student/tests' },
   { icon: '⭐', label: 'Recommendations', path: '/student/recommendations' },
   { icon: '📈', label: 'Progress Analytics', path: '/student/analytics' },

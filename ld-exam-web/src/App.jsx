@@ -25,7 +25,6 @@ import MessagingPage from './pages/messages/MessagingPage';
 import StudentDashboardWeb from './pages/student/dashboard/StudentDashboard';
 import StudentTestSpace from './pages/student/test/TestSpace';
 import StudentScreeningPage from './pages/student/screening/ScreeningPage';
-import PracticePage from './pages/student/practice/PracticePage';
 import RecommendationsPage from './pages/student/recommendations/RecommendationsPage';
 import StudentAnalyticsPage from './pages/student/analytics/AnalyticsPage';
 import UserProfilePage from './pages/student/profile/ProfilePage';
@@ -254,14 +253,6 @@ const App = () => {
         element={
           <ProtectedRoute allowedRoles={['student']}>
             <StudentScreeningPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/student/practice"
-        element={
-          <ProtectedRoute allowedRoles={['student']}>
-            <PracticePage />
           </ProtectedRoute>
         }
       />

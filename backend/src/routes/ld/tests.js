@@ -19,6 +19,7 @@ const { query } = require('../../config/database');
 const { requireAuth } = require('../../middleware/auth');
 const { generateWrongAnswerFeedback, generatePracticeQuestions, isAvailable } = require('../../services/llamaService');
 const questionPool = require('../../services/questionPool');
+const { getPersonalizedSet, getByDifficulty, analyzeResults: analyzeBank } = require('../../data/universalQuestionBank');
 
 // ─── GET /levels — All levels with unlock status ────────────────────
 router.get('/levels', requireAuth, async (req, res, next) => {

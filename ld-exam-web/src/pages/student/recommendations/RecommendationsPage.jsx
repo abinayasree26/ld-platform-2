@@ -118,10 +118,10 @@ const RecommendationsPage = () => {
       .then(s => { if (s?.ld_type_detected) setLdType(s.ld_type_detected); })
       .catch(() => {});
 
-    // Also try analytics API for category mastery (most reliable source)
+    // Fetch test history to find weak areas based on test performance
     const studentId = user?.id;
     if (studentId) {
-      // Use the current-student endpoint (by-id path 404s in real mode)
+      // Use analytics API for category mastery from test results
       analyticsAPI.me()
         .then(data => {
           if (data?.categoryMastery?.length && weakCategories.length === 0) {
@@ -134,13 +134,14 @@ const RecommendationsPage = () => {
         .catch(() => {});
     }
 
-    // Fetch practice history to find weak areas
-    ldAPI.practiceHistory()
+    // Fetch test/level history to find weak areas from test performance
+    ldAPI.testHistory()
       .then(data => {
-        if (data?.sessions?.length) {
-          // Group by category, calculate average accuracy
+        if (data?.attempts?.length || data?.sessions?.length) {
+          const sessions = data.attempts || data.sessions || [];
+          // Group by category/level, calculate average accuracy
           const categoryScores = {};
-          data.sessions.forEach(s => {
+          sessions.forEach(s => {
             const cat = s.session_type;
             if (!categoryScores[cat]) categoryScores[cat] = { total: 0, correct: 0, count: 0 };
             categoryScores[cat].total += s.exercises_total || 0;
@@ -239,11 +240,8 @@ const RecommendationsPage = () => {
   };
 
   const startPractice = (rec) => {
-    if (rec?.key === 'test') {
-      navigate('/student/tests');
-    } else {
-      navigate('/student/practice', rec?.key ? { state: { category: rec.key } } : undefined);
-    }
+    // All recommendations now navigate to the test section
+    navigate('/student/tests');
   };
 
   return (

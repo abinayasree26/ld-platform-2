@@ -3,16 +3,20 @@ const { v4: uuid } = require('uuid');
 const { query } = require('../../config/database');
 const { requireAuth } = require('../../middleware/auth');
 const { classifyLD } = require('../../services/ldClassifier');
+const { getAllQuestions, analyzeResults } = require('../../data/universalQuestionBank');
 
 // Get screening questions
 router.get('/questions', requireAuth, async (req, res, next) => {
   try {
-    const { rows } = await query(
-      `SELECT id, question_text, question_type, options, correct_answer, category, order_index
-       FROM screening_questions WHERE is_active=TRUE
-       ORDER BY order_index`
-    );
-    res.json({ questions: rows, totalQuestions: rows.length, estimatedMinutes: 15 });
+    // Serve questions from the universal question bank (100 questions, Beginner → Advanced)
+    const allQuestions = getAllQuestions().map(q => ({
+      id: q.id, question_text: q.question_text, question_type: q.question_type,
+      options: q.options, category: q.topic, order_index: q.question_number,
+      difficulty: q.difficulty, sub_topic: q.sub_topic, ld_trigger: q.ld_trigger,
+      requires_audio: q.requires_audio, requires_speech: q.requires_speech,
+      requires_typing: q.requires_typing, requires_image: q.requires_image,
+    }));
+    res.json({ questions: allQuestions, totalQuestions: allQuestions.length, estimatedMinutes: 15 });
   } catch (err) { next(err); }
 });
 

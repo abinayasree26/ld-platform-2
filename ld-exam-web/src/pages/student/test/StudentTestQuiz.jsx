@@ -411,7 +411,8 @@ const StudentTestQuiz = ({ level, onResult, onBack }) => {
           Question {current + 1}
         </p>
         <p className="text-lg font-bold text-slate-800 leading-relaxed mb-3">{q.question_text}</p>
-        <SpeakBtn text={q.question_text} />
+        {/* Audio only for scenario-based questions in Level 4 & 5 */}
+        {(level >= 4 && q.question_type === 'scenario') && <SpeakBtn text={q.question_text} />}
       </div>
 
       {/* Options or Speaking input */}

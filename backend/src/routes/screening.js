@@ -6,16 +6,18 @@
 const router = require('express').Router();
 const { query } = require('../config/database');
 const screeningService = require('../services/screeningService');
+const { getAllQuestions } = require('../data/universalQuestionBank');
 
 // GET /api/screening/questions — Get all active screening questions (ordered)
 router.get('/questions', async (req, res, next) => {
   try {
-    const { rows } = await query(
-      `SELECT id, question_text, question_type, category, options, order_index
-       FROM screening_questions
-       WHERE is_active = TRUE
-       ORDER BY order_index ASC`
-    );
+    // Serve from universal question bank (100 questions, Beginner → Advanced)
+    const rows = getAllQuestions().map(q => ({
+      id: q.id, question_text: q.question_text, question_type: q.question_type,
+      category: q.topic, options: q.options, order_index: q.question_number,
+      difficulty: q.difficulty, requires_audio: q.requires_audio,
+      requires_image: q.requires_image,
+    }));
 
     res.json({
       questions: rows,
