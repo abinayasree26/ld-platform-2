@@ -190,9 +190,13 @@ const LoginPage = () => {
         }
       } catch { /* fallback */ }
 
+      // If not found in Supabase, check localStorage but also try to get password from Supabase
       if (!foundStudent) {
         const customStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
-        foundStudent = customStudents.find(s => s.email?.toLowerCase() === cleanEmail);
+        const localMatch = customStudents.find(s => s.email?.toLowerCase() === cleanEmail);
+        if (localMatch) {
+          foundStudent = localMatch;
+        }
       }
 
       if (!foundStudent) {
@@ -202,12 +206,14 @@ const LoginPage = () => {
       }
 
       // Verify password
-      if (foundStudent.password && foundStudent.password !== password) {
+      const storedPassword = foundStudent.password;
+      if (storedPassword && storedPassword !== password) {
         toast.error('Wrong password! Please try again.');
         return;
       }
-      if (!foundStudent.password && password.length < 6) {
-        toast.error('Wrong password! Please try again.');
+      if (!storedPassword) {
+        // No password stored — reject login, student must re-register or admin must set password
+        toast.error('Password not set for this account. Please contact admin or re-register.');
         return;
       }
 
