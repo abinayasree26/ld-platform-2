@@ -224,9 +224,10 @@ const AdminSettings = () => {
     const recipient = settings?.smtp?.username || settings?.smtp?.fromEmail || 'jaisree1126@gmail.com';
     try {
       toast.loading('Sending test email...', { id: 'test-email' });
-      const resp = await fetch('/api/admin/settings/test-email', {
+      const BACKEND_URL = 'https://ld-platform-2.onrender.com';
+      const resp = await fetch(`${BACKEND_URL}/api/admin/settings/test-email`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
         body: JSON.stringify({
           smtpConfig: settings?.smtp,
           targetEmail: recipient,
@@ -240,13 +241,12 @@ const AdminSettings = () => {
         toast.success(data.message || `Test email dispatched to ${recipient}!`);
         recordAuditAction(`Test Email Sent (${recipient})`);
       } else {
-        toast.success(`Test email dispatched to ${recipient}!`);
-        recordAuditAction(`Test Email Sent (${recipient})`);
+        const errData = resp ? await resp.text().catch(() => '') : 'Backend unreachable';
+        toast.error(`Email failed: ${errData || 'Backend not responding'}`);
       }
     } catch {
       toast.dismiss('test-email');
-      toast.success(`Test email dispatched to ${recipient}!`);
-      recordAuditAction(`Test Email Sent (${recipient})`);
+      toast.error('Failed to send test email — backend unreachable');
     }
   };
 
