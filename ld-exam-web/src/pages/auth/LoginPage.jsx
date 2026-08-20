@@ -184,7 +184,7 @@ const LoginPage = () => {
       const cleanEmail = email.trim().toLowerCase();
       let foundStudent = null;
       try {
-        const { data: supaMatch } = await supabase.from('students').select('*').eq('email', cleanEmail).maybeSingle();
+        const { data: supaMatch } = await supabase.from('students').select('*, password').eq('email', cleanEmail).maybeSingle();
         if (supaMatch && supaMatch.email) {
           foundStudent = supaMatch;
         }
@@ -197,7 +197,17 @@ const LoginPage = () => {
 
       if (!foundStudent) {
         toast.error('Account not found! Please register first.');
-        setTab('register');
+        setMode('register');
+        return;
+      }
+
+      // Verify password
+      if (foundStudent.password && foundStudent.password !== password) {
+        toast.error('Wrong password! Please try again.');
+        return;
+      }
+      if (!foundStudent.password && password.length < 6) {
+        toast.error('Wrong password! Please try again.');
         return;
       }
 
@@ -265,6 +275,7 @@ const LoginPage = () => {
           id: user.id || `st-${Date.now()}`,
           name: user.name || 'Student',
           email: user.email,
+          password=[REDACTED_PASSWORD]
           grade: grade ? `Class ${grade}` : 'Class 5',
           ldType: 'Unscreened',
           severity: 'Pending',
@@ -286,6 +297,7 @@ const LoginPage = () => {
           id: newStudent.id,
           name: newStudent.name,
           email: newStudent.email.toLowerCase(),
+          password: password,
           grade: newStudent.grade,
           ld_type: null,
           severity: null,
