@@ -281,7 +281,7 @@ const LoginPage = () => {
           id: user.id || `st-${Date.now()}`,
           name: user.name || 'Student',
           email: user.email,
-          password=[REDACTED_PASSWORD]
+          password: password,
           grade: grade ? `Class ${grade}` : 'Class 5',
           ldType: 'Unscreened',
           severity: 'Pending',
