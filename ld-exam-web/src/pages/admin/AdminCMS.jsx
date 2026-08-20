@@ -488,7 +488,7 @@ const AdminCMS = () => {
           <div className="flex items-end justify-between">
             <div>
               <h2 className="text-2xl font-black text-[var(--text-main)]">Content Management</h2>
-              <p className="text-slate-500 text-sm mt-1">Manage test questions and practice exercises</p>
+              <p className="text-slate-500 text-sm mt-1">Manage test questions for screening and level assessments</p>
             </div>
             <div className="flex gap-2">
               <input type="file" id="cms-import" accept=".csv,.json" className="hidden" onChange={(e) => {
@@ -500,10 +500,10 @@ const AdminCMS = () => {
                 📥 Bulk Upload
               </button>
               <button onClick={() => {
-                const exportData = tab === 'questions' ? questions : exercises;
+                const exportData = questions;
                 const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
                 const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-                a.download = `${tab}_export_${new Date().toISOString().slice(0,10)}.json`; a.click();
+                a.download = `questions_export_${new Date().toISOString().slice(0,10)}.json`; a.click();
                 toast.success('Exported!');
               }} className="px-4 py-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl text-xs font-bold text-slate-500 hover:border-purple-400 hover:text-purple-600 transition">
                 📤 Export JSON
@@ -513,15 +513,7 @@ const AdminCMS = () => {
         </div>
 
         {/* Tab switcher */}
-        <div className="flex gap-1 bg-[var(--bg-main)] border border-[var(--border-main)] p-1 rounded-xl w-fit mb-6">
-          {[['questions', 'Test Questions'], ['exercises', 'Practice Exercises']].map(([key, label]) => (
-            <button key={key} onClick={() => setTab(key)}
-              className={`px-5 py-2 rounded-lg text-sm font-bold transition
-                ${tab === key ? 'bg-[var(--bg-card)] text-purple-600 shadow-sm' : 'text-slate-500 hover:text-[var(--text-main)]'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <h3 className="text-lg font-bold text-[var(--text-main)] mb-6">Test Questions</h3>
 
         {/* Questions tab */}
         {tab === 'questions' && (
@@ -604,84 +596,6 @@ const AdminCMS = () => {
           </div>
         )}
 
-        {/* Exercises tab */}
-        {tab === 'exercises' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-3 items-center">
-                <select value={eFilter.type} onChange={(e) => setEFilter({ type: e.target.value, page: 1 })}
-                  className="border border-[var(--border-main)] bg-[var(--bg-main)] text-[var(--text-main)] rounded-lg px-3 py-1.5 text-sm capitalize">
-                  <option value="">All Types</option>
-                  {EXERCISE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <span className="text-xs text-[var(--text-muted)]">{eTotal} total</span>
-              </div>
-              <button onClick={() => setModal({ type: 'create-e' })}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-xl">
-                + New Exercise
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="flex justify-center py-16"><div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
-            ) : (
-              <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden bg-[var(--bg-card)] shadow-sm overflow-x-auto">
-                <table className="w-full text-sm min-w-[600px]">
-                  <thead className="bg-[var(--bg-main)] border-b border-[var(--border-main)]">
-                    <tr>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase">Title</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase w-24">Type</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase w-24">LD Target</th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-slate-500 uppercase w-16">Level</th>
-                      <th className="w-20 px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {exercises.map((ex) => (
-                      <tr key={ex.id} className="hover:bg-[var(--bg-main)] transition">
-                        <td className="px-4 py-3 font-medium text-[var(--text-main)]">
-                          <div className="text-[var(--text-main)] font-medium">{ex.title}</div>
-                          <div className="text-xs text-[var(--text-muted)] truncate max-w-xs">{ex.instruction}</div>
-                        </td>
-                        <td className="px-4 py-3"><Badge color={TYPE_COLORS[ex.exercise_type]}>{ex.exercise_type}</Badge></td>
-                        <td className="px-4 py-3 text-[var(--text-muted)] text-xs capitalize">{(ex.ld_target || '').replace('_', ' ')}</td>
-                        <td className="px-4 py-3"><Badge>L{ex.level}</Badge></td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2 justify-end">
-                            <button onClick={() => setModal({ type: 'edit-e', data: {
-                              id: ex.id,
-                              exerciseType: ex.exercise_type,
-                              ldTarget: ex.ld_target,
-                              level: ex.level,
-                              title: ex.title,
-                              instruction: ex.instruction,
-                              content: JSON.stringify(ex.content || {}, null, 2),
-                            }})} className="text-blue-600 hover:underline text-xs font-semibold">Edit</button>
-                            <button onClick={() => deleteExercise(ex.id)} className="text-red-500 hover:underline text-xs font-semibold">Del</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {!exercises.length && (
-                      <tr><td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">No exercises yet — click "+ New Exercise" to add one</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {eTotal > PAGE_SIZE && (
-              <div className="flex justify-center gap-3 mt-4">
-                <button disabled={eFilter.page <= 1} onClick={() => setEFilter((f) => ({ ...f, page: f.page - 1 }))}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--border-main)] text-sm disabled:opacity-40">← Prev</button>
-                <span className="text-sm text-slate-500 self-center">Page {eFilter.page} of {Math.ceil(eTotal / PAGE_SIZE)}</span>
-                <button disabled={eFilter.page * PAGE_SIZE >= eTotal} onClick={() => setEFilter((f) => ({ ...f, page: f.page + 1 }))}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--border-main)] text-sm disabled:opacity-40">Next →</button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Modals */}
@@ -693,16 +607,6 @@ const AdminCMS = () => {
       {modal?.type === 'edit-q' && (
         <Modal title="Edit Question" onClose={() => setModal(null)}>
           <QuestionForm initial={modal.data} onSave={saveQuestion} onCancel={() => setModal(null)} />
-        </Modal>
-      )}
-      {modal?.type === 'create-e' && (
-        <Modal title="New Exercise" onClose={() => setModal(null)}>
-          <ExerciseForm onSave={saveExercise} onCancel={() => setModal(null)} />
-        </Modal>
-      )}
-      {modal?.type === 'edit-e' && (
-        <Modal title="Edit Exercise" onClose={() => setModal(null)}>
-          <ExerciseForm initial={modal.data} onSave={saveExercise} onCancel={() => setModal(null)} />
         </Modal>
       )}
     </Layout>
