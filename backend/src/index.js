@@ -88,6 +88,22 @@ if (env.demoMode) {
   app.use('/api/schools', requireAuth, demoSchools);
 
   // Admin management (demo data)
+  // Public test-email endpoint (no auth needed — SMTP creds in body prove admin access)
+  app.post('/api/public/test-email', async (req, res) => {
+    const { smtpConfig = {}, targetEmail } = req.body;
+    const recipient = targetEmail || smtpConfig.username || 'admin@ldschools.in';
+    const { sendTestEmail } = require('./services/email.service');
+    try {
+      const result = await sendTestEmail(smtpConfig, recipient);
+      if (result.error) {
+        return res.status(400).json({ ok: false, error: result.error });
+      }
+      res.json({ ok: true, message: `Test email sent to ${recipient}`, result });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message });
+    }
+  });
+
   app.use('/api/admin', requireAuth, demoAdmin);
 
   // Payments router (Razorpay order & verify)

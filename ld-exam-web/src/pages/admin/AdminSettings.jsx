@@ -225,9 +225,9 @@ const AdminSettings = () => {
     try {
       toast.loading('Sending test email...', { id: 'test-email' });
       const BACKEND_URL = 'https://ld-platform-2.onrender.com';
-      const resp = await fetch(`${BACKEND_URL}/api/admin/settings/test-email`, {
+      const resp = await fetch(`${BACKEND_URL}/api/public/test-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           smtpConfig: settings?.smtp,
           targetEmail: recipient,
