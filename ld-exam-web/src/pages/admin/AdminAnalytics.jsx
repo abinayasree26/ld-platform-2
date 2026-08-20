@@ -30,9 +30,8 @@ const AdminAnalytics = () => {
     Promise.all([
       fetch('/api/admin/analytics', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => null),
       supabase.from('students').select('email, screened, ld_type').then(res => res.data || []).catch(() => []),
-      supabase.from('practice_sessions').select('*').then(res => res.data || []).catch(() => []),
       supabase.from('test_attempts').select('*').then(res => res.data || []).catch(() => []),
-    ]).then(([resData, supaData, supaPractice, supaTests]) => {
+    ]).then(([resData, supaData, supaTests]) => {
         const rawStudents = JSON.parse(localStorage.getItem('admin_registered_students') || '[]');
         const rawScreenings = JSON.parse(localStorage.getItem('admin_custom_screening_results') || '[]');
 
@@ -51,10 +50,10 @@ const AdminAnalytics = () => {
         const totalCount = uniqueStudentEmails.size;
         const screenedCount = uniqueScreenedEmails.size;
 
-        const totalSessions = supaPractice.length + supaTests.length;
-        const allScores = [...supaPractice.map(p => p.score_percent), ...supaTests.map(t => t.score_percent)].filter(n => typeof n === 'number');
+        const totalSessions = supaTests.length;
+        const allScores = supaTests.map(t => t.score_percent).filter(n => typeof n === 'number');
         const avgAccuracy = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
-        const allTimes = [...supaPractice.map(p => p.time_taken_seconds), ...supaTests.map(t => t.time_taken_seconds)].filter(n => typeof n === 'number' && n > 0);
+        const allTimes = supaTests.map(t => t.time_taken_seconds).filter(n => typeof n === 'number' && n > 0);
         const avgSessionMinutes = allTimes.length > 0 ? Math.round((allTimes.reduce((a, b) => a + b, 0) / allTimes.length) / 60) || 1 : 0;
 
         setData({
@@ -64,6 +63,7 @@ const AdminAnalytics = () => {
             avgAccuracy: avgAccuracy,
             avgSessionMinutes: avgSessionMinutes,
             totalPracticeSessions: totalSessions,
+            totalTestSessions: totalSessions,
             screenedStudents: screenedCount,
           },
           dailyActiveUsers: resData?.dailyActiveUsers || [],
@@ -152,7 +152,7 @@ const AdminAnalytics = () => {
           <StatCard icon="⚡" label="Active This Week" value={overview?.activeThisWeek} color="bg-emerald-600" />
           <StatCard icon="🎯" label="Avg Accuracy" value={`${overview?.avgAccuracy}%`} color="bg-purple-600" />
           <StatCard icon="⏱️" label="Avg Session" value={`${overview?.avgSessionMinutes} min`} color="bg-amber-500" />
-          <StatCard icon="📊" label="Total Sessions" value={overview?.totalPracticeSessions?.toLocaleString()} color="bg-cyan-600" />
+          <StatCard icon="📊" label="Total Test Attempts" value={overview?.totalPracticeSessions?.toLocaleString()} color="bg-cyan-600" />
           <StatCard icon="🧠" label="Screened" value={overview?.screenedStudents} color="bg-pink-600" />
         </div>
 

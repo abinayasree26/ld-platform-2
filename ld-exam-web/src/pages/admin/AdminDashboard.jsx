@@ -43,9 +43,8 @@ const AdminDashboard = () => {
     Promise.all([
       adminAPI.getOverview().catch(() => ({})),
       supabase.from('students').select('email, screened, ld_type').then(res => res.data || []).catch(() => []),
-      supabase.from('practice_sessions').select('*').then(res => res.data || []).catch(() => []),
       supabase.from('test_attempts').select('*').then(res => res.data || []).catch(() => []),
-    ]).then(([res, supaData, supaPractice, supaTests]) => {
+    ]).then(([res, supaData, supaTests]) => {
         const overviewObj = res?.data || res || {};
         const deletedEmails = new Set(JSON.parse(localStorage.getItem('admin_deleted_student_emails') || '[]'));
 
@@ -70,8 +69,8 @@ const AdminDashboard = () => {
         const screenedStudentCount = uniqueScreenedEmails.size;
         const screeningRate = realTotalStudents > 0 ? Math.min(100, Math.round((screenedStudentCount / realTotalStudents) * 100)) : 0;
 
-        const totalSessions = supaPractice.length + supaTests.length;
-        const allScores = [...supaPractice.map(p => p.score_percent), ...supaTests.map(t => t.score_percent)].filter(n => typeof n === 'number');
+        const totalSessions = supaTests.length;
+        const allScores = supaTests.map(t => t.score_percent).filter(n => typeof n === 'number');
         const realAvgAccuracy = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : (overviewObj.avgAccuracy || 0);
 
         // Deduplicate LD Type per unique student email
@@ -210,7 +209,7 @@ const AdminDashboard = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard icon="👥" label="Total Students" value={fmt(data?.totalStudents ?? 0)} color="bg-blue-600" sub="Registered accounts" />
-          <StatCard icon="⚡" label="Active Today" value={fmt(data?.activeToday ?? 0)} color="bg-emerald-600" sub="Logged in / practiced" trend={8} />
+          <StatCard icon="⚡" label="Active Today" value={fmt(data?.activeToday ?? 0)} color="bg-emerald-600" sub="Logged in today" trend={8} />
           <StatCard icon="📝" label="New This Week" value={fmt(data?.newSignupsThisWeek ?? 0)} color="bg-indigo-600" sub={`${fmt(data?.newSignupsThisMonth ?? 0)} this month`} trend={15} />
           <StatCard icon="💳" label="Revenue" value={`₹${fmt(data?.subscriptionRevenue ?? 0)}`} color="bg-amber-500" sub={`${data?.activeSubscriptions ?? 0} active subs`} trend={12} />
         </div>
@@ -219,7 +218,7 @@ const AdminDashboard = () => {
           <StatCard icon="🧠" label="Screening Rate" value={`${data?.screeningCompletionRate ?? 0}%`} color="bg-purple-600" sub="Completed screening" />
           <StatCard icon="🔄" label="Conversion" value={`${data?.conversionRate ?? 0}%`} color="bg-teal-600" sub="Free → Paid" trend={3} />
           <StatCard icon="⚠️" label="At-Risk" value={fmt(data?.atRiskCount ?? 0)} color="bg-red-500" sub="Need attention" />
-          <StatCard icon="🎯" label="Avg Accuracy" value={`${data?.avgAccuracy ?? 0}%`} color="bg-cyan-600" sub="Practice sessions" trend={5} />
+          <StatCard icon="🎯" label="Avg Accuracy" value={`${data?.avgAccuracy ?? 0}%`} color="bg-cyan-600" sub="Level test scores" trend={5} />
         </div>
 
         {/* Charts Row */}
