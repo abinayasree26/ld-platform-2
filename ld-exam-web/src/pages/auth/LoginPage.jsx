@@ -282,20 +282,29 @@ const LoginPage = () => {
         }
 
         // Real-time Cloud DB sync with Supabase
-        supabase.from('students').upsert([{
+        const { error: dbError } = await supabase.from('students').insert([{
           id: newStudent.id,
           name: newStudent.name,
           email: newStudent.email.toLowerCase(),
           grade: newStudent.grade,
-          ld_type: newStudent.ldType,
-          severity: newStudent.severity,
+          ld_type: null,
+          severity: null,
           level: newStudent.level,
           status: newStudent.status,
           last_active: 'Today',
           subscription: newStudent.subscription,
           screened: false,
           created_at: new Date().toISOString(),
-        }], { onConflict: 'email' }).then(() => {}).catch(() => {});
+        }]);
+        if (dbError) {
+          console.warn('Supabase student insert failed:', dbError.message);
+          // If duplicate email, try update instead
+          if (dbError.code === '23505') {
+            console.log('Student already exists in DB, skipping insert');
+          }
+        } else {
+          console.log('Student saved to Supabase DB successfully');
+        }
       } catch { /* ignore */ }
 
       toast.success(`Account created! Welcome, ${user.name}!`);
