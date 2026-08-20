@@ -133,7 +133,17 @@ const LoginPage = () => {
         localStorage.setItem('admin_audit_logs', JSON.stringify(updatedLogs));
       } catch { /* ignore */ }
 
-      // Static deployment fallback for Admin login
+      // Static deployment fallback for Admin login — verify credentials locally
+      const VALID_ADMIN_USERNAME = 'admin';
+      const VALID_ADMIN_PASSWORD = 'admin123';
+
+      if (adminUsername.trim().toLowerCase() !== VALID_ADMIN_USERNAME ||
+          adminPassword.trim() !== VALID_ADMIN_PASSWORD) {
+        toast.error('Invalid username or password');
+        setLoading(false);
+        return;
+      }
+
       const adminUser = {
         id: 'admin-1',
         name: 'Administrator',
