@@ -97,9 +97,9 @@ const AdminScreening = () => {
       // Fetch total registered students count for "Not Started" calculation
       let totalStudentsCount = 0;
       try {
-        const { count } = await supabase.from('students').select('*', { count: 'exact', head: true });
-        totalStudentsCount = count ?? 0;
-        console.log('DEBUG: Total students from DB =', count, '| totalStudentsCount =', totalStudentsCount);
+        const { data: allStudents } = await supabase.from('students').select('id');
+        totalStudentsCount = allStudents ? allStudents.length : 0;
+        console.log('DEBUG: Total students from DB =', totalStudentsCount);
       } catch { /* ignore */ }
 
       try {
@@ -168,8 +168,9 @@ const AdminScreening = () => {
       const inProgress = uniqueList.filter(r => (r.status || '').toLowerCase() === 'in progress' || (r.status || '').toLowerCase() === 'in_progress').length;
       
       console.log('DEBUG STATS: totalStudentsCount=', totalStudentsCount, 'uniqueList.length=', uniqueList.length, 'completed=', completed, 'inProgress=', inProgress);
-      // Not Started = total registered students minus those who have screening records (completed + in progress)
-      const totalRegistered = totalStudentsCount || uniqueList.length;
+      // Not Started = total registered students minus those who have screening records
+      // Use the larger of DB count vs screening list (in case some students only exist in screening_results)
+      const totalRegistered = Math.max(totalStudentsCount, uniqueList.length);
       const notStarted = Math.max(0, totalRegistered - completed - inProgress);
       const completionRate = totalRegistered > 0 ? Math.round((completed / totalRegistered) * 100) : 0;
       const riskScores = uniqueList.map(r => r.riskScore || r.risk_score).filter(n => typeof n === 'number' && n > 0);
