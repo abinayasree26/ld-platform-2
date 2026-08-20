@@ -106,6 +106,13 @@ const AdminScreening = () => {
 
       try {
         const { data: supaScreened } = await supabase.from('students').select('*').eq('screened', true);
+        // Also fetch screening_results for actual risk scores
+        const { data: supaScreeningResults } = await supabase.from('screening_results').select('student_email, risk_score');
+        const riskScoreMap = new Map();
+        if (supaScreeningResults) {
+          supaScreeningResults.forEach(r => { if (r.student_email && r.risk_score) riskScoreMap.set(r.student_email.toLowerCase(), r.risk_score); });
+        }
+
         if (supaScreened && supaScreened.length > 0) {
           const existingEmails = new Set(list.map(r => r.studentEmail || r.email));
           const supaFormatted = supaScreened.map(s => ({
@@ -115,7 +122,7 @@ const AdminScreening = () => {
             studentEmail: s.email,
             ldType: s.ld_type || 'Dyslexia',
             severity: s.severity || 'Moderate',
-            riskScore: 50,
+            riskScore: riskScoreMap.get(s.email?.toLowerCase()) || 50,
             status: 'completed',
             completedAt: s.created_at || new Date().toISOString(),
             breakdown: { dyslexia: 50, dysgraphia: 40, dyscalculia: 30 },
@@ -147,10 +154,19 @@ const AdminScreening = () => {
       const uniqueList = Array.from(latestPerStudentMap.values());
 
       setResults(uniqueList);
-      setStats({ total: uniqueList.length, completed: uniqueList.length, pending: 0 });
+
+      // Compute stats
+      const completed = uniqueList.filter(r => (r.status || '').toLowerCase() === 'completed').length;
+      const inProgress = uniqueList.filter(r => (r.status || '').toLowerCase() === 'in progress' || (r.status || '').toLowerCase() === 'in_progress').length;
+      const notStarted = uniqueList.length - completed - inProgress;
+      const completionRate = uniqueList.length > 0 ? Math.round((completed / uniqueList.length) * 100) : 0;
+      const riskScores = uniqueList.map(r => r.riskScore || r.risk_score).filter(n => typeof n === 'number' && n > 0);
+      const avgConfidence = riskScores.length > 0 ? Math.round(riskScores.reduce((a, b) => a + b, 0) / riskScores.length) : 0;
+
+      setStats({ total: uniqueList.length, completed, inProgress, notStarted, completionRate, avgConfidence });
     } catch {
       setResults([]);
-      setStats({ total: 0, completed: 0, pending: 0 });
+      setStats({ total: 0, completed: 0, inProgress: 0, notStarted: 0, completionRate: 0, avgConfidence: 0 });
     } finally {
       setLoading(false);
     }
