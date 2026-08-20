@@ -167,7 +167,6 @@ const AdminScreening = () => {
       const completed = uniqueList.filter(r => (r.status || '').toLowerCase() === 'completed').length;
       const inProgress = uniqueList.filter(r => (r.status || '').toLowerCase() === 'in progress' || (r.status || '').toLowerCase() === 'in_progress').length;
       
-      console.log('DEBUG STATS: totalStudentsCount=', totalStudentsCount, 'uniqueList.length=', uniqueList.length, 'completed=', completed, 'inProgress=', inProgress);
       // Not Started = total registered students minus those who have screening records
       // Use the larger of DB count vs screening list (in case some students only exist in screening_results)
       const totalRegistered = Math.max(totalStudentsCount, uniqueList.length);
@@ -176,7 +175,8 @@ const AdminScreening = () => {
       const riskScores = uniqueList.map(r => r.riskScore || r.risk_score).filter(n => typeof n === 'number' && n > 0);
       const avgConfidence = riskScores.length > 0 ? Math.round(riskScores.reduce((a, b) => a + b, 0) / riskScores.length) : 0;
 
-      setStats({ total: uniqueList.length, completed, inProgress, notStarted, completionRate, avgConfidence, totalRegistered });
+      console.log('STATS:', { total: uniqueList.length, completed, inProgress, notStarted, completionRate, avgConfidence, totalRegistered });
+      setStats({ total: uniqueList.length || 0, completed: completed || 0, inProgress: inProgress || 0, notStarted: notStarted || 0, completionRate: completionRate || 0, avgConfidence: avgConfidence || 0, totalRegistered: totalRegistered || 0 });
     } catch {
       setResults([]);
       setStats({ total: 0, completed: 0, inProgress: 0, notStarted: 0, completionRate: 0, avgConfidence: 0 });
@@ -248,27 +248,27 @@ const AdminScreening = () => {
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border-main)] text-center">
-              <p className="text-xl sm:text-2xl font-black text-[var(--text-main)]">{stats.total}</p>
+              <p className="text-xl sm:text-2xl font-black text-[var(--text-main)]">{stats.total || 0}</p>
               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Total Sessions</p>
             </div>
             <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border-main)] text-center">
-              <p className="text-xl sm:text-2xl font-black text-emerald-600">{stats.completed}</p>
+              <p className="text-xl sm:text-2xl font-black text-emerald-600">{stats.completed || 0}</p>
               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Completed</p>
             </div>
             <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border-main)] text-center">
-              <p className="text-xl sm:text-2xl font-black text-blue-600">{stats.inProgress}</p>
+              <p className="text-xl sm:text-2xl font-black text-blue-600">{stats.inProgress || 0}</p>
               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">In Progress</p>
             </div>
             <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border-main)] text-center">
-              <p className="text-xl sm:text-2xl font-black text-slate-400">{stats.notStarted}</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-400">{stats.notStarted || 0}</p>
               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Not Started</p>
             </div>
             <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border-main)] text-center">
-              <p className="text-xl sm:text-2xl font-black text-purple-600">{stats.completionRate}%</p>
+              <p className="text-xl sm:text-2xl font-black text-purple-600">{stats.completionRate || 0}%</p>
               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Completion Rate</p>
             </div>
             <div className="bg-[var(--bg-card)] rounded-xl p-4 border border-[var(--border-main)] text-center">
-              <p className="text-xl sm:text-2xl font-black text-amber-600">{stats.avgConfidence}%</p>
+              <p className="text-xl sm:text-2xl font-black text-amber-600">{stats.avgConfidence || 0}%</p>
               <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Avg Confidence</p>
             </div>
           </div>

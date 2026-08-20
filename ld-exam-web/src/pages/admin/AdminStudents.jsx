@@ -564,18 +564,22 @@ const AdminStudents = () => {
         const targetStudent = students.find(s => String(s.id) === String(id) || (s.email && s.email.toLowerCase() === String(id).toLowerCase()));
         const targetEmail = (targetStudent?.email || (typeof id === 'string' && id.includes('@') ? id : '')).toLowerCase();
 
-        if (targetEmail) {
-          await supabase.from('students').delete().ilike('email', targetEmail).catch(() => null);
-          await supabase.from('screening_results').delete().ilike('student_email', targetEmail).catch(() => null);
-          await supabase.from('test_attempts').delete().ilike('student_email', targetEmail).catch(() => null);
-          await supabase.from('practice_sessions').delete().ilike('student_email', targetEmail).catch(() => null);
+        try {
+          if (targetEmail) {
+            await supabase.from('students').delete().ilike('email', targetEmail).catch(() => null);
+            await supabase.from('screening_results').delete().ilike('student_email', targetEmail).catch(() => null);
+            await supabase.from('test_attempts').delete().ilike('student_email', targetEmail).catch(() => null);
+            await supabase.from('practice_sessions').delete().ilike('student_email', targetEmail).catch(() => null);
 
-          if (!newDeletedEmails.includes(targetEmail)) {
-            newDeletedEmails.push(targetEmail);
+            if (!newDeletedEmails.includes(targetEmail)) {
+              newDeletedEmails.push(targetEmail);
+            }
           }
-        }
-        if (id && !String(id).includes('@')) {
-          await supabase.from('students').delete().eq('id', id).catch(() => null);
+          if (id && !String(id).includes('@')) {
+            await supabase.from('students').delete().eq('id', id).catch(() => null);
+          }
+        } catch (err) {
+          console.warn('Bulk delete item failed:', id, err?.message);
         }
       }
 
