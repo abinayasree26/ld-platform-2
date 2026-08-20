@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import Layout from '../../components/Layout';
+import { supabase } from '../../services/supabaseClient';
 
 const Toggle = ({ value, onChange, label }) => (
   <div className="flex items-center justify-between py-2">
@@ -138,30 +139,30 @@ const AdminSettings = () => {
   };
 
   useEffect(() => {
-    fetch('/api/admin/settings', { headers })
-      .then(r => (r && r.ok) ? r.json() : null)
-      .then(apiData => {
-        try {
-          const savedLocal = localStorage.getItem('admin_platform_settings');
-          if (savedLocal) {
-            const parsed = JSON.parse(savedLocal);
-            setSettings({ ...DEFAULT_SETTINGS, ...(apiData || {}), ...parsed });
-            return;
-          }
-        } catch { /* fallback */ }
-        setSettings({ ...DEFAULT_SETTINGS, ...(apiData || {}) });
-      })
-      .catch(() => {
-        try {
-          const savedLocal = localStorage.getItem('admin_platform_settings');
-          if (savedLocal) {
-            setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedLocal) });
-            return;
-          }
-        } catch { /* ignore */ }
+    const loadSettings = async () => {
+      try {
+        const { data: row } = await supabase.from('admin_settings').select('*').eq('id', 'main').maybeSingle();
+        if (row) {
+          setSettings({
+            admin: { name: row.admin_name || 'Administrator', email: row.admin_email || '', role: row.admin_role || 'school_admin' },
+            platform: { name: row.platform_name || 'LD Support', logo: row.platform_logo || '', theme: row.theme || 'dark', language: row.language || 'English' },
+            app: { name: row.platform_name || 'LD Support Platform' },
+            screening: { passScore: row.screening_pass_score || 70, maxAttempts: row.screening_max_attempts || 3 },
+            subscription: { plan: row.subscription_plan || 'Free Tier' },
+            privacy: { dataRetentionDays: row.data_retention_days || 365 },
+            integrations: { enabled: row.integrations_enabled !== false },
+            smtp: { host: row.smtp_host || '', port: row.smtp_port || '587', fromEmail: row.smtp_from_email || '', fromName: row.smtp_from_name || '', username: row.smtp_username || '', password: row.smtp_password || '' },
+          });
+        } else {
+          setSettings(DEFAULT_SETTINGS);
+        }
+      } catch {
         setSettings(DEFAULT_SETTINGS);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -187,14 +188,33 @@ const AdminSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetch('/api/admin/settings', { method: 'PATCH', headers, body: JSON.stringify(settings) }).catch(() => null);
-      try {
-        localStorage.setItem('admin_platform_settings', JSON.stringify(settings));
-      } catch { /* ignore */ }
+      const { error } = await supabase.from('admin_settings').upsert([{
+        id: 'main',
+        admin_name: settings.admin?.name || 'Administrator',
+        admin_email: settings.admin?.email || '',
+        admin_role: settings.admin?.role || 'school_admin',
+        platform_name: settings.platform?.name || 'LD Support',
+        platform_logo: settings.platform?.logo || '',
+        theme: settings.platform?.theme || 'dark',
+        language: settings.platform?.language || 'English',
+        screening_pass_score: settings.screening?.passScore || 70,
+        screening_max_attempts: settings.screening?.maxAttempts || 3,
+        subscription_plan: settings.subscription?.plan || 'Free Tier',
+        data_retention_days: settings.privacy?.dataRetentionDays || 365,
+        integrations_enabled: settings.integrations?.enabled !== false,
+        smtp_host: settings.smtp?.host || '',
+        smtp_port: settings.smtp?.port || '587',
+        smtp_from_email: settings.smtp?.fromEmail || '',
+        smtp_from_name: settings.smtp?.fromName || '',
+        smtp_username: settings.smtp?.username || '',
+        smtp_password: settings.smtp?.password || '',
+        updated_at: new Date().toISOString(),
+      }], { onConflict: 'id' });
+      if (error) throw error;
       toast.success('Settings saved successfully!');
       recordAuditAction('Settings Updated');
     } catch {
-      toast.success('Settings saved!');
+      toast.error('Failed to save settings');
     } finally {
       setSaving(false);
     }
