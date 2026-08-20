@@ -94,6 +94,14 @@ const AdminScreening = () => {
 
       const token = localStorage.getItem('auth_token');
       let list = [];
+      // Fetch total registered students count for "Not Started" calculation
+      let totalStudentsCount = 0;
+      try {
+        const { count } = await supabase.from('students').select('*', { count: 'exact', head: true });
+        totalStudentsCount = count ?? 0;
+        console.log('DEBUG: Total students from DB =', count, '| totalStudentsCount =', totalStudentsCount);
+      } catch { /* ignore */ }
+
       try {
         const resp = await fetch(`/api/admin/screening?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -158,12 +166,16 @@ const AdminScreening = () => {
       // Compute stats
       const completed = uniqueList.filter(r => (r.status || '').toLowerCase() === 'completed').length;
       const inProgress = uniqueList.filter(r => (r.status || '').toLowerCase() === 'in progress' || (r.status || '').toLowerCase() === 'in_progress').length;
-      const notStarted = uniqueList.length - completed - inProgress;
-      const completionRate = uniqueList.length > 0 ? Math.round((completed / uniqueList.length) * 100) : 0;
+      
+      console.log('DEBUG STATS: totalStudentsCount=', totalStudentsCount, 'uniqueList.length=', uniqueList.length, 'completed=', completed, 'inProgress=', inProgress);
+      // Not Started = total registered students minus those who have screening records (completed + in progress)
+      const totalRegistered = totalStudentsCount || uniqueList.length;
+      const notStarted = Math.max(0, totalRegistered - completed - inProgress);
+      const completionRate = totalRegistered > 0 ? Math.round((completed / totalRegistered) * 100) : 0;
       const riskScores = uniqueList.map(r => r.riskScore || r.risk_score).filter(n => typeof n === 'number' && n > 0);
       const avgConfidence = riskScores.length > 0 ? Math.round(riskScores.reduce((a, b) => a + b, 0) / riskScores.length) : 0;
 
-      setStats({ total: uniqueList.length, completed, inProgress, notStarted, completionRate, avgConfidence });
+      setStats({ total: uniqueList.length, completed, inProgress, notStarted, completionRate, avgConfidence, totalRegistered });
     } catch {
       setResults([]);
       setStats({ total: 0, completed: 0, inProgress: 0, notStarted: 0, completionRate: 0, avgConfidence: 0 });
