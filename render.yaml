@@ -1,0 +1,38 @@
+# Render Blueprint — LD Schools Backend
+# Deploy: Connect GitHub repo → Render auto-detects this file
+
+services:
+  - type: web
+    name: ld-schools-api
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DEMO_MODE
+        value: "false"
+      - key: SKIP_MIGRATIONS
+        value: "false"
+      - key: DB_HOST
+        value: db.cvunxlxtqyuklzxgyivv.supabase.co
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: postgres
+      - key: DB_USER
+        value: postgres.cvunxlxtqyuklzxgyivv
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: LLAMA_BASE_URL
+        value: ""
