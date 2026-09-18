@@ -47,7 +47,7 @@ const StudentDashboardWeb = () => {
         .then((s) => {
           if (s?.screened === false) {
             sessionStorage.setItem('screening_redirected', '1');
-            navigate('/student/screening');
+            navigate('/student/adaptive-screening');
           }
         })
         .catch(() => {});
@@ -145,10 +145,10 @@ const StudentDashboardWeb = () => {
   const categories = categoryMastery.length > 0 ? categoryMastery : defaultCategories;
   const sessions = recentSessions.length > 0 ? recentSessions.slice(0, 5) : [];
 
-  const card = { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+  const card = { background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', padding: 20, boxShadow: '0 4px 16px rgba(15,60,107,0.08)' };
 
   return (
-    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F8FD', fontFamily: "'Outfit','Inter', system-ui, sans-serif" }}>
 
       <StudentSidebar />
 
@@ -170,7 +170,7 @@ const StudentDashboardWeb = () => {
 
           {/* ═══ ROW 1: Hero Banner + Stats ═══ */}
           <div className="sp-grid-2" style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: '5fr 7fr', gap: 20 }}>
-            <div style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', borderRadius: 16, padding: '20px 24px', color: '#fff', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ background: 'linear-gradient(135deg, #2563EB 0%, #0EA5A4 100%)', borderRadius: 20, padding: '22px 26px', color: '#fff', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 10px 30px rgba(37,99,235,0.25)' }}>
               <LevelAvatar level={avatarLevel} size={64} />
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Hi {firstName}! 🌟</h2>
@@ -229,8 +229,8 @@ const StudentDashboardWeb = () => {
                   <AreaChart data={trend.map((t, i) => ({ ...t, label: t.label || (t.date ? new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : `#${i + 1}`) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -241,7 +241,7 @@ const StudentDashboardWeb = () => {
                       formatter={(value) => [`${value}%`, '⭐ Score']}
                       labelFormatter={(label) => `📅 ${label}`}
                     />
-                    <Area type="monotone" dataKey="mastery" stroke="#6366f1" strokeWidth={2} fill="url(#grad)" dot={false} />
+                    <Area type="monotone" dataKey="mastery" stroke="#2563EB" strokeWidth={2.5} fill="url(#grad)" dot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -262,7 +262,7 @@ const StudentDashboardWeb = () => {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 500, color: '#475569', width: 110, flexShrink: 0 }}>{cat.category?.replace(/_/g, ' ')}</span>
                     <div style={{ flex: 1, height: 7, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', borderRadius: 50, background: '#f97316', width: `${cat.mastery || cat.score || 0}%` }} />
+                      <div style={{ height: '100%', borderRadius: 50, background: 'linear-gradient(90deg,#2563EB,#0EA5A4)', width: `${cat.mastery || cat.score || 0}%` }} />
                     </div>
                     <span style={{ fontSize: 10, color: '#64748b', width: 38, textAlign: 'right' }}>{cat.trend || '↑'} {cat.mastery || cat.score || 0}%</span>
                   </div>
@@ -298,13 +298,13 @@ const StudentDashboardWeb = () => {
             {/* Side Cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflowY: 'auto' }}>
               {/* Level Test CTA */}
-              <div style={{ flexShrink: 0, background: '#16a34a', borderRadius: 14, padding: 14, color: '#fff', textAlign: 'center' }}>
+              <div style={{ flexShrink: 0, background: 'linear-gradient(135deg,#16A34A,#0EA5A4)', borderRadius: 16, padding: 16, color: '#fff', textAlign: 'center', boxShadow: '0 8px 20px rgba(22,163,74,0.25)' }}>
                 <span style={{ fontSize: 22 }}>🏆</span>
                 <h4 style={{ fontSize: 13, fontWeight: 800, margin: '4px 0 0' }}>Level Test</h4>
                 <p style={{ fontSize: 11, color: '#dcfce7', margin: '4px 0 10px' }}>Ready for Level {Math.min(level + 1, 5)}!</p>
                 <button
                   onClick={() => navigate('/student/tests')}
-                  style={{ width: '100%', background: '#fff', color: '#16a34a', fontWeight: 800, padding: '8px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12 }}
+                  style={{ width: '100%', background: '#fff', color: '#16A34A', fontWeight: 800, padding: '10px 0', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 12, minHeight: 40 }}
                 >
                   Take Test →
                 </button>

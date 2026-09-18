@@ -11,7 +11,7 @@ import AboutIcon from '../../../components/AboutIcon';
 const card = { background: '#fff', borderRadius: 16, boxShadow: '0 4px 16px rgba(15, 60, 107, 0.08)' };
 
 const DOMAINS = [
-  { key: 'phonics', label: 'Phonics', color: '#4f46e5', icon: '🔤' },
+  { key: 'phonics', label: 'Phonics', color: '#2563EB', icon: '🔤' },
   { key: 'reading', label: 'Reading', color: '#0f766e', icon: '📖' },
   { key: 'writing', label: 'Writing', color: '#c2410c', icon: '✍️' },
   { key: 'math', label: 'Math', color: '#16a34a', icon: '➗' },
@@ -85,7 +85,7 @@ const StudentAnalyticsPage = () => {
   ];
 
   return (
-    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F8FD', fontFamily: "'Outfit','Inter', system-ui, sans-serif" }}>
       <StudentSidebar />
 
       {/* ═══ MAIN CONTENT ═══ */}

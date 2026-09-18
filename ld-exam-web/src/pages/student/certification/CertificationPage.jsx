@@ -11,7 +11,7 @@ import LevelAvatar from '../../../components/LevelAvatar';
 import { currentAvatarLevel } from '../../../data/avatarSystem';
 import AboutIcon from '../../../components/AboutIcon';
 
-const card = { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
+const card = { background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', padding: 20, boxShadow: '0 4px 16px rgba(15,60,107,0.08)' };
 
 const CertificationPage = () => {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const CertificationPage = () => {
   const cert = certKey ? CERTIFICATE_TYPES.find((c) => c.key === certKey) : null;
 
   return (
-    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="sp-page" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F5F8FD', fontFamily: "'Outfit','Inter', system-ui, sans-serif" }}>
       <StudentSidebar />
 
       {/* ═══ MAIN CONTENT ═══ */}
@@ -42,7 +42,7 @@ const CertificationPage = () => {
             <>
             <button
               onClick={() => navigate(-1)}
-              style={{ alignSelf: 'flex-start', background: '#4f46e5', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16 }}
+              style={{ alignSelf: 'flex-start', background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16 }}
             >
               ← Back
             </button>
@@ -54,7 +54,7 @@ const CertificationPage = () => {
               </p>
               <button
                 onClick={() => navigate('/student/profile')}
-                style={{ background: '#4f46e5', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, border: 'none', cursor: 'pointer' }}
+                style={{ background: '#2563EB', color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 22px', borderRadius: 10, border: 'none', cursor: 'pointer' }}
               >
                 View Plans
               </button>
@@ -62,7 +62,7 @@ const CertificationPage = () => {
             </>
           ) : cert ? (
             <>
-              <button onClick={() => navigate('/student/certification')} style={{ alignSelf: 'flex-start', background: '#4f46e5', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16 }}>
+              <button onClick={() => navigate('/student/certification')} style={{ alignSelf: 'flex-start', background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16 }}>
                 All Certificates
               </button>
 
@@ -78,7 +78,7 @@ const CertificationPage = () => {
                     <div>
                       <button
                         onClick={() => viewCertificate(cert.title)}
-                        style={{ width: '100%', marginTop: 24, background: '#4f46e5', color: '#fff', fontWeight: 800, fontSize: 14, padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer' }}
+                        style={{ width: '100%', marginTop: 24, background: '#2563EB', color: '#fff', fontWeight: 800, fontSize: 14, padding: '12px 0', borderRadius: 12, border: 'none', cursor: 'pointer' }}
                       >
                         View / Download Certificate
                       </button>
@@ -91,7 +91,7 @@ const CertificationPage = () => {
                     </span>
                     <div style={{ maxWidth: 340, margin: '20px auto 0' }}>
                       <div style={{ height: 9, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: 50, background: '#4f46e5', width: `${cert.progress}%` }} />
+                        <div style={{ height: '100%', borderRadius: 50, background: '#2563EB', width: `${cert.progress}%` }} />
                       </div>
                       <p style={{ fontSize: 13, color: '#94a3b8', margin: '8px 0 0' }}>{cert.progress}% complete</p>
                     </div>
@@ -108,7 +108,7 @@ const CertificationPage = () => {
             <>
               <button
                 onClick={() => navigate(-1)}
-                style={{ alignSelf: 'flex-start', background: '#4f46e5', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16 }}
+                style={{ alignSelf: 'flex-start', background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16 }}
               >
               ← Back
               </button>
@@ -128,7 +128,7 @@ const CertificationPage = () => {
                   </div>
                 </div>
                 <div style={{ ...card, padding: '14px 24px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 26, fontWeight: 800, color: '#4f46e5', margin: 0 }}>{earnedCerts.length}/{CERTIFICATE_TYPES.length}</p>
+                  <p style={{ fontSize: 26, fontWeight: 800, color: '#2563EB', margin: 0 }}>{earnedCerts.length}/{CERTIFICATE_TYPES.length}</p>
                   <p style={{ fontSize: 11, color: '#94a3b8', margin: 0, fontWeight: 600, textTransform: 'uppercase' }}>Earned</p>
                 </div>
               </div>
@@ -139,7 +139,7 @@ const CertificationPage = () => {
                   onClick={() => setFilter('all')}
                   style={{
                     fontSize: 14, fontWeight: 700, padding: '10px 22px', borderRadius: 12, cursor: 'pointer',
-                    border: filter === 'all' ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+                    border: filter === 'all' ? '2px solid #2563EB' : '1px solid #e2e8f0',
                     background: filter === 'all' ? '#eef2ff' : '#fff', color: filter === 'all' ? '#4338ca' : '#64748b',
                   }}
                 >

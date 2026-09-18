@@ -263,7 +263,7 @@ const RecommendationsPage = () => {
           <button
             onClick={() => navigate(-1)}
             style={{
-              alignSelf: 'flex-start', background: '#4f46e5', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16
+              alignSelf: 'flex-start', background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '8px 16px', borderRadius: 10, border: 'none', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', marginBottom: 16
             }}
           >
               ← Back
@@ -278,7 +278,7 @@ const RecommendationsPage = () => {
               </p>
               <button
                 onClick={() => navigate('/student/profile')}
-                style={{ background: '#4f46e5', color: '#fff', fontWeight: 700, fontSize: 15, padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer' }}
+                style={{ background: '#2563EB', color: '#fff', fontWeight: 700, fontSize: 15, padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer' }}
               >
                 View Plans →
               </button>

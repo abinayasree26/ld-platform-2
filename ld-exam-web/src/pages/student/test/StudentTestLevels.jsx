@@ -116,7 +116,7 @@ const StudentTestLevels = ({ onStart }) => {
     <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       <button
         onClick={() => navigate(-1)}
-        className="bg-indigo-600 text-white text-sm font-bold px-4 py-2 rounded-lg shadow-sm mb-4 text-xs hover:bg-indigo-700 transition"
+        className="bg-blue-600 text-white text-sm font-bold px-4 py-2 rounded-full shadow-sm mb-4 text-xs hover:bg-blue-700 transition"
       >
         ← Back
       </button>
@@ -261,7 +261,7 @@ const StudentTestLevels = ({ onStart }) => {
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${h.passed ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-600'}`}>
                       {h.passed ? '✅ Passed' : '✕ Not passed'}
                     </span>
-                    <span className="text-sm font-bold text-indigo-600 ml-auto">{h.scorePercent}%</span>
+                    <span className="text-sm font-bold text-blue-600 ml-auto">{h.scorePercent}%</span>
                   </div>
                   <p className="text-xs text-slate-500">
                     {h.correctCount}/{h.totalQuestions} correct · ⏱ {formatScreenTime(h.timeTakenSeconds)} screen time

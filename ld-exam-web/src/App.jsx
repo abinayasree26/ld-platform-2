@@ -254,7 +254,7 @@ const App = () => {
         path="/student/screening"
         element={
           <ProtectedRoute allowedRoles={['student']}>
-            <StudentScreeningPage />
+            <Navigate to="/student/adaptive-screening" replace />
           </ProtectedRoute>
         }
       />
