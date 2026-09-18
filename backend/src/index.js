@@ -169,6 +169,9 @@ if (env.demoMode) {
   app.use('/api/ld/push',              require('./routes/ld/push'));
   app.use('/api/ld/stt',               require('./routes/ld/stt'));
 
+  // Adaptive Screening (NEW English+Math skill assessment — separate from LD screening)
+  app.use('/api/ld/adaptive-screening', require('./middleware/auth').requireAuth, require('./routes/ld/adaptiveScreening'));
+
   // Run migrations on startup — UNLESS explicitly skipped.
   // Set SKIP_MIGRATIONS=true when connecting to a SHARED / production DB that is
   // managed by a different migration system, so this backend never alters that

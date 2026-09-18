@@ -25,6 +25,8 @@ import MessagingPage from './pages/messages/MessagingPage';
 import StudentDashboardWeb from './pages/student/dashboard/StudentDashboard';
 import StudentTestSpace from './pages/student/test/TestSpace';
 import StudentScreeningPage from './pages/student/screening/ScreeningPage';
+import AdaptiveScreeningPage from './pages/student/screening/AdaptiveScreeningPage';
+import AdaptiveResultPage from './pages/student/screening/AdaptiveResultPage';
 import RecommendationsPage from './pages/student/recommendations/RecommendationsPage';
 import StudentAnalyticsPage from './pages/student/analytics/AnalyticsPage';
 import UserProfilePage from './pages/student/profile/ProfilePage';
@@ -253,6 +255,22 @@ const App = () => {
         element={
           <ProtectedRoute allowedRoles={['student']}>
             <StudentScreeningPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/adaptive-screening"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <AdaptiveScreeningPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/student/adaptive-screening/result/:sessionId"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <AdaptiveResultPage />
           </ProtectedRoute>
         }
       />

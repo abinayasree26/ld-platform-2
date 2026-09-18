@@ -163,3 +163,144 @@ body {
 /* Scrollable panels that should scroll without showing a visible scrollbar track/thumb */
 .sp-hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .sp-hide-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LD LEARN DESIGN TOKENS  (Phase 0 — shared visual system)
+   Additive only. Extends the existing --bg/--text/--border/--accent vars so
+   light AND dark mode keep working automatically. Nothing here changes logic,
+   layout structure, or existing component behavior — pages opt in by using
+   the .ld-* classes or importing src/data/designTokens.js.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand (LD Learn) */
+  --ld-primary: #2563EB;
+  --ld-primary-600: #2563EB;
+  --ld-primary-700: #1D4ED8;
+  --ld-primary-soft: #EAF1FB;      /* soft blue surface */
+  --ld-primary-ring: rgba(37, 99, 235, 0.35);
+
+  /* Subject accents */
+  --ld-english: #2563EB;           /* blue */
+  --ld-english-soft: #EAF1FB;
+  --ld-math: #0EA5A4;              /* teal/mint */
+  --ld-math-soft: #E3F6F5;
+
+  /* Semantic (results / feedback) */
+  --ld-strong: #16A34A;            /* strengths / progress */
+  --ld-strong-soft: #E7F6EC;
+  --ld-developing: #F59E0B;        /* developing */
+  --ld-developing-soft: #FEF3E2;
+  --ld-support: #EF4444;           /* needs support / mic record */
+  --ld-support-soft: #FDECEC;
+
+  /* Neutrals (map onto existing theme vars where possible) */
+  --ld-surface: var(--bg-card);
+  --ld-surface-muted: #F1F5F9;
+  --ld-text: var(--text-main);
+  --ld-text-muted: var(--text-muted);
+  --ld-border: #E2E8F0;
+
+  /* Radii */
+  --ld-radius-sm: 10px;
+  --ld-radius: 16px;
+  --ld-radius-lg: 20px;
+  --ld-radius-pill: 999px;
+
+  /* Shadows */
+  --ld-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ld-shadow: 0 4px 16px rgba(15, 60, 107, 0.08);
+  --ld-shadow-lg: 0 10px 30px rgba(15, 60, 107, 0.12);
+
+  /* Spacing scale (for consistent rhythm) */
+  --ld-gap-xs: 6px;
+  --ld-gap-sm: 10px;
+  --ld-gap: 16px;
+  --ld-gap-lg: 24px;
+}
+
+.dark, .ld-dark {
+  --ld-primary-soft: #1e293b;
+  --ld-english-soft: #17233b;
+  --ld-math-soft: #113536;
+  --ld-strong-soft: #12331f;
+  --ld-developing-soft: #33270f;
+  --ld-support-soft: #331717;
+  --ld-surface-muted: #0f172a;
+  --ld-border: #334155;
+  --ld-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --ld-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+@layer components {
+  /* Card */
+  .ld-card {
+    background: var(--ld-surface);
+    border: 1px solid var(--ld-border);
+    border-radius: var(--ld-radius);
+    box-shadow: var(--ld-shadow);
+    padding: var(--ld-gap-lg);
+  }
+  .ld-card-tight { padding: var(--ld-gap); }
+
+  /* Section heading */
+  .ld-h {
+    font-weight: 800;
+    color: var(--ld-text);
+    letter-spacing: -0.01em;
+  }
+  .ld-sub { color: var(--ld-text-muted); }
+
+  /* Buttons */
+  .ld-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-weight: 700; font-size: 0.95rem; line-height: 1;
+    padding: 12px 20px; border-radius: var(--ld-radius-pill);
+    border: 2px solid transparent; cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    min-height: 44px;                 /* a11y touch target */
+  }
+  .ld-btn:active { transform: scale(0.98); }
+  .ld-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ld-btn-primary { background: var(--ld-primary); color: #fff; box-shadow: 0 6px 16px var(--ld-primary-ring); }
+  .ld-btn-primary:hover:not(:disabled) { background: var(--ld-primary-700); }
+  .ld-btn-ghost {
+    background: transparent; color: var(--ld-text);
+    border-color: var(--ld-border);
+  }
+  .ld-btn-ghost:hover:not(:disabled) { background: var(--ld-surface-muted); }
+
+  /* Chips / pills */
+  .ld-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: var(--ld-radius-pill);
+    font-size: 12px; font-weight: 700;
+    background: var(--ld-surface-muted); color: var(--ld-text-muted);
+  }
+  .ld-chip-english { background: var(--ld-english-soft); color: var(--ld-english); }
+  .ld-chip-math    { background: var(--ld-math-soft);    color: var(--ld-math); }
+  .ld-chip-strong  { background: var(--ld-strong-soft);  color: var(--ld-strong); }
+  .ld-chip-dev     { background: var(--ld-developing-soft); color: var(--ld-developing); }
+  .ld-chip-support { background: var(--ld-support-soft); color: var(--ld-support); }
+
+  /* Progress bar */
+  .ld-progress { width: 100%; height: 10px; border-radius: var(--ld-radius-pill);
+    background: var(--ld-surface-muted); overflow: hidden; }
+  .ld-progress > i { display: block; height: 100%; border-radius: inherit;
+    background: var(--ld-primary); transition: width 0.3s ease; }
+
+  /* Selectable option (MCQ / answer) */
+  .ld-option {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    text-align: left; padding: 14px 16px; border-radius: var(--ld-radius-sm);
+    border: 2px solid var(--ld-border); background: var(--ld-surface);
+    color: var(--ld-text); font-weight: 600; cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+    min-height: 44px;
+  }
+  .ld-option:hover { border-color: var(--ld-primary); }
+  .ld-option[data-selected="true"] {
+    border-color: var(--ld-primary);
+    background: var(--ld-primary-soft);
+  }
+}

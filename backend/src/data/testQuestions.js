@@ -29,7 +29,7 @@ const testQuestions = [
   { question_text: 'Put in order (smallest first): 8, 3, 5', question_type: 'mcq', category: 'number_sense', ld_target: 'dyscalculia', level: 2, options: ['3, 5, 8', '8, 5, 3', '5, 3, 8', '3, 8, 5'], correct_answer: '3, 5, 8', order_index: 15 },
   { question_text: 'What comes next: 2, 4, 6, ___?', question_type: 'mcq', category: 'patterns', ld_target: 'dyscalculia', level: 2, options: ['7', '8', '9', '10'], correct_answer: '8', order_index: 16 },
   { question_text: 'Which is spelled correctly?', question_type: 'mcq', category: 'writing', ld_target: 'dysgraphia', level: 2, options: ['dgo', 'dog', 'god', 'odg'], correct_answer: 'dog', order_index: 17 },
-  { question_text: 'Which is spelled correctly?', question_type: 'mcq', category: 'writing', ld_target: 'dysgraphia', level: 2, options: ['brid', 'bird', 'brid', 'drbi'], correct_answer: 'bird', order_index: 18 },
+  { question_text: 'Which is spelled correctly?', question_type: 'mcq', category: 'writing', ld_target: 'dysgraphia', level: 2, options: ['brid', 'bird', 'bidr', 'drbi'], correct_answer: 'bird', order_index: 18 },
   { question_text: 'What letter is missing: _un (something bright in the sky)?', question_type: 'mcq', category: 'writing', ld_target: 'dysgraphia', level: 2, options: ['s', 'r', 'f', 'b'], correct_answer: 's', order_index: 19 },
   { question_text: 'Which number comes between 14 and 16?', question_type: 'mcq', category: 'number_sense', ld_target: 'dyscalculia', level: 2, options: ['13', '15', '17', '14'], correct_answer: '15', order_index: 20 },
 

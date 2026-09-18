@@ -54,8 +54,8 @@ const QUESTION_BANK = [
     "sub_topic": "Phoneme Isolation",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Phoneme_Isolation",
-    "question_type": "audio_image_tap",
-    "question_text": "Which word starts with 'Bbb'?",
+    "question_type": "mcq",
+    "question_text": "Which word starts with the 'B' sound?",
     "options": [
       "Ball",
       "Dog",
@@ -65,7 +65,7 @@ const QUESTION_BANK = [
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "letter_sounds",
       "initial_sound"
@@ -132,8 +132,8 @@ const QUESTION_BANK = [
     "sub_topic": "Rhyming Words",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Rhyming_Sounds",
-    "question_type": "audio_image_tap",
-    "question_text": "What rhymes with 'cat'?",
+    "question_type": "mcq",
+    "question_text": "Which word rhymes with 'cat'?",
     "options": [
       "Hat",
       "Dog",
@@ -143,7 +143,7 @@ const QUESTION_BANK = [
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "rhyming",
       "phonetic_awareness"
@@ -236,8 +236,8 @@ const QUESTION_BANK = [
     "sub_topic": "Sight Word Recognition",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Sight_Words",
-    "question_type": "audio_image_tap",
-    "question_text": "Tap the word 'the'",
+    "question_type": "mcq",
+    "question_text": "Which of these is the word 'the'?",
     "options": [
       "the",
       "cat",
@@ -315,13 +315,13 @@ const QUESTION_BANK = [
     "ld_trigger": "dyslexia",
     "clinical_metric": "Sentence_Comprehension",
     "question_type": "mcq",
-    "question_text": "The cat is ___. (Choose: happy/sad/red)",
+    "question_text": "Which word is NOT a feeling?",
     "options": [
       "happy",
       "sad",
       "red"
     ],
-    "correct_answer": "happy",
+    "correct_answer": "red",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -340,13 +340,14 @@ const QUESTION_BANK = [
     "sub_topic": "Story Sequencing",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Sequence_Order",
-    "question_type": "drag_order",
-    "question_text": "Arrange: First, a caterpillar. Then, it becomes a butterfly.",
+    "question_type": "mcq",
+    "question_text": "What does a caterpillar become?",
     "options": [
-      "Caterpillar",
-      "Butterfly"
+      "Butterfly",
+      "Bird",
+      "Fish"
     ],
-    "correct_answer": "Caterpillar | Butterfly",
+    "correct_answer": "Butterfly",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -391,10 +392,12 @@ const QUESTION_BANK = [
     "sub_topic": "Letter Tracing",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Letter_Tracing",
-    "question_type": "trace",
-    "question_text": "Trace the letter 'A'",
+    "question_type": "mcq",
+    "question_text": "Which letter is this: A?",
     "options": [
-      "Letter outline"
+      "A",
+      "B",
+      "C"
     ],
     "correct_answer": "A",
     "requires_audio": false,
@@ -467,10 +470,12 @@ const QUESTION_BANK = [
     "sub_topic": "Word Tracing",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Word_Tracing",
-    "question_type": "trace",
-    "question_text": "Trace the word 'dog'",
+    "question_type": "mcq",
+    "question_text": "Which spelling is correct for a pet that barks?",
     "options": [
-      "Word outline"
+      "dog",
+      "dgo",
+      "god"
     ],
     "correct_answer": "dog",
     "requires_audio": false,
@@ -621,18 +626,18 @@ const QUESTION_BANK = [
     "sub_topic": "Puzzle Piece Matching",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Spatial_Matching",
-    "question_type": "drag_order",
-    "question_text": "Arrange puzzle pieces in correct order",
+    "question_type": "mcq",
+    "question_text": "Which comes first when you build something?",
     "options": [
-      "Piece A",
-      "Piece B",
-      "Piece C"
+      "First piece",
+      "Last piece",
+      "Middle piece"
     ],
-    "correct_answer": "Piece A | Piece B | Piece C",
+    "correct_answer": "First piece",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "spatial_reasoning",
       "assembly"
@@ -726,10 +731,11 @@ const QUESTION_BANK = [
     "ld_trigger": "dyscalculia",
     "clinical_metric": "Number_Comparison",
     "question_type": "mcq",
-    "question_text": "Which is bigger? 3 or 7",
+    "question_text": "Which number is bigger?",
     "options": [
       "3",
-      "7"
+      "7",
+      "5"
     ],
     "correct_answer": "7",
     "requires_audio": false,
@@ -854,13 +860,14 @@ const QUESTION_BANK = [
     "sub_topic": "Sound Recognition",
     "ld_trigger": "mixed",
     "clinical_metric": "Sound_Discrimination",
-    "question_type": "audio_image_tap",
-    "question_text": "Listen and tap: Which sound is louder?",
+    "question_type": "mcq",
+    "question_text": "Which is louder: a whisper or a shout?",
     "options": [
-      "Quiet sound",
-      "Loud sound"
+      "A shout",
+      "A whisper",
+      "Both same"
     ],
-    "correct_answer": "Loud sound",
+    "correct_answer": "A shout",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
@@ -879,17 +886,18 @@ const QUESTION_BANK = [
     "sub_topic": "Direction Following",
     "ld_trigger": "mixed",
     "clinical_metric": "Instruction_Following",
-    "question_type": "audio_image_tap",
-    "question_text": "Follow the instruction: Tap the red circle",
+    "question_type": "mcq",
+    "question_text": "Which shape is a red circle?",
     "options": [
       "Red circle",
-      "Blue square"
+      "Blue square",
+      "Green triangle"
     ],
     "correct_answer": "Red circle",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "listening",
       "comprehension"
@@ -931,13 +939,13 @@ const QUESTION_BANK = [
     "ld_trigger": "dyslexia",
     "clinical_metric": "Digraph_ID",
     "question_type": "mcq",
-    "question_text": "Which words have 'ch' sound?",
+    "question_text": "Which word has the 'ch' sound?",
     "options": [
       "chair",
       "apple",
-      "church"
+      "table"
     ],
-    "correct_answer": "chair, church",
+    "correct_answer": "chair",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -1163,14 +1171,14 @@ const QUESTION_BANK = [
     "sub_topic": "Story Order",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Story_Sequencing",
-    "question_type": "drag_order",
-    "question_text": "Arrange in order: went to school, woke up, ate breakfast",
+    "question_type": "mcq",
+    "question_text": "What do you do first in the morning?",
     "options": [
-      "woke up",
-      "ate breakfast",
-      "went to school"
+      "Wake up",
+      "Go to school",
+      "Eat lunch"
     ],
-    "correct_answer": "woke up, ate breakfast, went to school",
+    "correct_answer": "Wake up",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -1267,16 +1275,18 @@ const QUESTION_BANK = [
     "sub_topic": "CVC Word Spelling",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "CVC_Spelling",
-    "question_type": "fill_blank",
-    "question_text": "Spell the word shown in picture (run)",
+    "question_type": "mcq",
+    "question_text": "How do you spell the word that means to move fast with your legs?",
     "options": [
-      "r_n"
+      "run",
+      "ran",
+      "rnu"
     ],
     "correct_answer": "run",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": true,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "spelling",
       "phonetic_spelling"
@@ -1291,11 +1301,12 @@ const QUESTION_BANK = [
     "sub_topic": "Word Completion",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Word_Completion",
-    "question_type": "fill_blank",
+    "question_type": "mcq",
     "question_text": "Complete: 'The cat is on the m___'",
     "options": [
       "mat",
-      "mat"
+      "map",
+      "man"
     ],
     "correct_answer": "mat",
     "requires_audio": false,
@@ -1316,12 +1327,14 @@ const QUESTION_BANK = [
     "sub_topic": "Sentence Writing",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Sentence_Writing",
-    "question_type": "read_complete",
-    "question_text": "Complete the sentence: 'I like to ___'",
+    "question_type": "mcq",
+    "question_text": "Which word best completes: 'I like to ___'?",
     "options": [
-      "Various answers"
+      "play",
+      "the",
+      "and"
     ],
-    "correct_answer": "play/read/eat/etc",
+    "correct_answer": "play",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": true,
@@ -1340,11 +1353,12 @@ const QUESTION_BANK = [
     "sub_topic": "Capitalization",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Capitalization",
-    "question_type": "fill_blank",
-    "question_text": "Fix: 'john likes pizza' (capitalize first name)",
+    "question_type": "mcq",
+    "question_text": "Which is the correct way to write a name?",
     "options": [
       "John",
-      "john"
+      "john",
+      "jOHN"
     ],
     "correct_answer": "John",
     "requires_audio": false,
@@ -1366,11 +1380,11 @@ const QUESTION_BANK = [
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Punctuation",
     "question_type": "mcq",
-    "question_text": "Which has correct punctuation?",
+    "question_text": "Which sentence has correct punctuation?",
     "options": [
-      "Where are you",
       "Where are you?",
-      "where are you"
+      "where are you",
+      "Where are you"
     ],
     "correct_answer": "Where are you?",
     "requires_audio": false,
@@ -1391,12 +1405,14 @@ const QUESTION_BANK = [
     "sub_topic": "Letter Writing",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Letter_Writing",
-    "question_type": "read_complete",
-    "question_text": "Write a greeting: 'Dear ___'",
+    "question_type": "mcq",
+    "question_text": "Which word starts a letter greeting: 'Dear ___'?",
     "options": [
-      "Name to write"
+      "Mom",
+      "Fast",
+      "Blue"
     ],
-    "correct_answer": "Mom/Friend/Name",
+    "correct_answer": "Mom",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": true,
@@ -1467,17 +1483,18 @@ const QUESTION_BANK = [
     "sub_topic": "Picture Differences",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Picture_Comparison",
-    "question_type": "read_select",
-    "question_text": "Find 2 differences between pictures",
+    "question_type": "mcq",
+    "question_text": "If two pictures look different, what are you looking for?",
     "options": [
-      "Picture A",
-      "Picture B"
+      "Differences",
+      "Colors only",
+      "Nothing"
     ],
-    "correct_answer": "Differences marked",
+    "correct_answer": "Differences",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "visual_discrimination",
       "detail_recognition"
@@ -1518,12 +1535,14 @@ const QUESTION_BANK = [
     "sub_topic": "Maze Navigation",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Spatial_Navigation",
-    "question_type": "trace",
-    "question_text": "Trace the path from start to end",
+    "question_type": "mcq",
+    "question_text": "To solve a maze, you trace a path from start to ___?",
     "options": [
-      "Maze outline"
+      "End",
+      "Middle",
+      "Side"
     ],
-    "correct_answer": "Correct path",
+    "correct_answer": "End",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -1673,10 +1692,11 @@ const QUESTION_BANK = [
     "ld_trigger": "dyscalculia",
     "clinical_metric": "Place_Value",
     "question_type": "mcq",
-    "question_text": "In 24, what is the tens digit?",
+    "question_text": "In the number 24, what is the tens digit?",
     "options": [
       "2",
-      "4"
+      "4",
+      "6"
     ],
     "correct_answer": "2",
     "requires_audio": false,
@@ -1774,11 +1794,12 @@ const QUESTION_BANK = [
     "sub_topic": "Auditory Discrimination",
     "ld_trigger": "mixed",
     "clinical_metric": "Sound_Discrimination",
-    "question_type": "audio_image_tap",
-    "question_text": "Are these words the same or different? (bat, bat)",
+    "question_type": "mcq",
+    "question_text": "Are the words 'bat' and 'bat' the same or different?",
     "options": [
       "Same",
-      "Different"
+      "Different",
+      "Cannot tell"
     ],
     "correct_answer": "Same",
     "requires_audio": true,
@@ -1799,12 +1820,14 @@ const QUESTION_BANK = [
     "sub_topic": "Story Recall",
     "ld_trigger": "mixed",
     "clinical_metric": "Story_Recall",
-    "question_type": "scenario",
-    "question_text": "Listen to story, then recall: What was the main character doing?",
+    "question_type": "mcq",
+    "question_text": "In a story, who is the main character?",
     "options": [
-      "Answer from story"
+      "The person the story is about",
+      "The reader",
+      "The author"
     ],
-    "correct_answer": "Correct recall",
+    "correct_answer": "The person the story is about",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
@@ -1979,12 +2002,14 @@ const QUESTION_BANK = [
     "sub_topic": "Cause and Effect",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Cause_Effect",
-    "question_type": "read_select",
-    "question_text": "What happened because of the heavy rain?",
+    "question_type": "mcq",
+    "question_text": "What can happen because of heavy rain?",
     "options": [
-      "Answer choices about effects"
+      "Flooding",
+      "Sunshine",
+      "Snow"
     ],
-    "correct_answer": "Correct effect",
+    "correct_answer": "Flooding",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -2003,12 +2028,14 @@ const QUESTION_BANK = [
     "sub_topic": "Theme Identification",
     "ld_trigger": "dyslexia",
     "clinical_metric": "Theme_ID",
-    "question_type": "read_select",
-    "question_text": "What is the theme of the story? (Story provided)",
+    "question_type": "mcq",
+    "question_text": "The main lesson or message of a story is called the ___?",
     "options": [
-      "Theme options"
+      "Theme",
+      "Title",
+      "Page"
     ],
-    "correct_answer": "Correct theme",
+    "correct_answer": "Theme",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
@@ -2053,12 +2080,14 @@ const QUESTION_BANK = [
     "sub_topic": "Paragraph Writing",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Paragraph_Writing",
-    "question_type": "writing_sample",
-    "question_text": "Write a paragraph about your favorite place",
+    "question_type": "mcq",
+    "question_text": "A good paragraph should have sentences about ___?",
     "options": [
-      "Paragraph provided"
+      "One main idea",
+      "Many random topics",
+      "Only numbers"
     ],
-    "correct_answer": "Complete paragraph",
+    "correct_answer": "One main idea",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": true,
@@ -2077,12 +2106,14 @@ const QUESTION_BANK = [
     "sub_topic": "Story Writing",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Story_Writing",
-    "question_type": "writing_sample",
-    "question_text": "Write a short story with beginning, middle, end",
+    "question_type": "mcq",
+    "question_text": "A story should have a beginning, a middle, and a(n) ___?",
     "options": [
-      "Story outline"
+      "End",
+      "Color",
+      "Number"
     ],
-    "correct_answer": "Complete story",
+    "correct_answer": "End",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": true,
@@ -2101,12 +2132,14 @@ const QUESTION_BANK = [
     "sub_topic": "Complex Spelling",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Advanced_Spelling",
-    "question_type": "fill_blank",
-    "question_text": "Spell: 'necessary', 'accommodate'",
+    "question_type": "mcq",
+    "question_text": "Which is the correct spelling?",
     "options": [
-      "Words to spell"
+      "necessary",
+      "neccessary",
+      "necesary"
     ],
-    "correct_answer": "Correct spelling",
+    "correct_answer": "necessary",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": true,
@@ -2150,11 +2183,12 @@ const QUESTION_BANK = [
     "sub_topic": "Editing & Revision",
     "ld_trigger": "dysgraphia",
     "clinical_metric": "Editing",
-    "question_type": "read_complete",
-    "question_text": "Edit for errors: 'I seen the movie yesterday.'",
+    "question_type": "mcq",
+    "question_text": "Which sentence is correct?",
     "options": [
-      "Corrected",
-      "Original"
+      "I saw the movie yesterday.",
+      "I seen the movie yesterday.",
+      "I seed the movie yesterday."
     ],
     "correct_answer": "I saw the movie yesterday.",
     "requires_audio": false,
@@ -2383,16 +2417,18 @@ const QUESTION_BANK = [
     "sub_topic": "Data Interpretation",
     "ld_trigger": "dyscalculia",
     "clinical_metric": "Data_Analysis",
-    "question_type": "read_select",
-    "question_text": "Looking at bar graph, which category has most?",
+    "question_type": "mcq",
+    "question_text": "On a bar graph, the tallest bar shows the category with the ___?",
     "options": [
-      "Category options"
+      "Most",
+      "Least",
+      "Same"
     ],
-    "correct_answer": "Correct category",
+    "correct_answer": "Most",
     "requires_audio": false,
     "requires_speech": false,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "data_interpretation",
       "graphs"
@@ -2407,12 +2443,14 @@ const QUESTION_BANK = [
     "sub_topic": "Complex Scenario",
     "ld_trigger": "mixed",
     "clinical_metric": "Complex_Listening",
-    "question_type": "scenario",
-    "question_text": "Listen to story with details. Answer: Why did character decide to ___?",
+    "question_type": "mcq",
+    "question_text": "Why might a character in a story make a choice?",
     "options": [
-      "Inference required"
+      "Because of a reason in the story",
+      "For no reason",
+      "Because of the reader"
     ],
-    "correct_answer": "Correct inference",
+    "correct_answer": "Because of a reason in the story",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
@@ -2431,10 +2469,12 @@ const QUESTION_BANK = [
     "sub_topic": "Phoneme Segmentation (Audio)",
     "ld_trigger": "mixed",
     "clinical_metric": "Phoneme_Segmentation",
-    "question_type": "listen_type",
-    "question_text": "Listen and type the word: (cat sound)",
+    "question_type": "mcq",
+    "question_text": "Which word matches the sound a cat makes and starts with 'c'?",
     "options": [
-      "c-a-t sounds"
+      "cat",
+      "dog",
+      "cup"
     ],
     "correct_answer": "cat",
     "requires_audio": true,
@@ -2455,12 +2495,14 @@ const QUESTION_BANK = [
     "sub_topic": "Detailed Comprehension",
     "ld_trigger": "mixed",
     "clinical_metric": "Detailed_Listening",
-    "question_type": "scenario",
-    "question_text": "Listen to academic passage. Recall: What were the 3 main points?",
+    "question_type": "mcq",
+    "question_text": "When you recall the main points of a passage, you remember the ___?",
     "options": [
-      "Multiple points"
+      "Important ideas",
+      "Page numbers",
+      "Cover color"
     ],
-    "correct_answer": "All 3 points recalled",
+    "correct_answer": "Important ideas",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
@@ -2480,12 +2522,14 @@ const QUESTION_BANK = [
     "sub_topic": "Speaker Interpretation",
     "ld_trigger": "mixed",
     "clinical_metric": "Speaker_Tone",
-    "question_type": "scenario",
-    "question_text": "Listen to speaker. What emotion or tone is expressed?",
+    "question_type": "mcq",
+    "question_text": "If a speaker sounds cheerful, what emotion are they showing?",
     "options": [
-      "Emotion options"
+      "Happy",
+      "Angry",
+      "Sad"
     ],
-    "correct_answer": "Correct emotion",
+    "correct_answer": "Happy",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,
@@ -2505,16 +2549,18 @@ const QUESTION_BANK = [
     "sub_topic": "Speech Production (Describe)",
     "ld_trigger": "mixed",
     "clinical_metric": "Speech_Production",
-    "question_type": "speak_photo",
-    "question_text": "Look at picture and describe what you see in detail",
+    "question_type": "mcq",
+    "question_text": "When you describe a picture, you tell what you ___?",
     "options": [
-      "Picture provided"
+      "See",
+      "Hear only",
+      "Taste"
     ],
-    "correct_answer": "Detailed description",
+    "correct_answer": "See",
     "requires_audio": false,
     "requires_speech": true,
     "requires_typing": false,
-    "requires_image": true,
+    "requires_image": false,
     "tags": [
       "speech",
       "description",
@@ -2530,12 +2576,14 @@ const QUESTION_BANK = [
     "sub_topic": "Speech Production (Summarize)",
     "ld_trigger": "mixed",
     "clinical_metric": "Speech_Summarize",
-    "question_type": "read_speak",
-    "question_text": "Read passage and summarize in your own words by speaking",
+    "question_type": "mcq",
+    "question_text": "To summarize a passage means to tell it ___?",
     "options": [
-      "Passage"
+      "In short, in your own words",
+      "Word for word",
+      "Backwards"
     ],
-    "correct_answer": "Spoken summary",
+    "correct_answer": "In short, in your own words",
     "requires_audio": false,
     "requires_speech": true,
     "requires_typing": false,
@@ -2555,12 +2603,14 @@ const QUESTION_BANK = [
     "sub_topic": "Interactive Listening",
     "ld_trigger": "mixed",
     "clinical_metric": "Interactive_Listening",
-    "question_type": "scenario",
-    "question_text": "Listen to scenario and respond with your action. (Multi-choice follow-up)",
+    "question_type": "mcq",
+    "question_text": "If a friend falls down, what is a kind response?",
     "options": [
-      "Scenario with options"
+      "Help them up",
+      "Laugh",
+      "Walk away"
     ],
-    "correct_answer": "Correct response",
+    "correct_answer": "Help them up",
     "requires_audio": true,
     "requires_speech": false,
     "requires_typing": false,

@@ -24,6 +24,7 @@ const SpeakButton = ({
   lang = 'en-IN',
   rate = 0.85,
   className = '',
+  title = null,
 }) => {
   const [state, setState] = useState('idle'); // idle | playing
 
@@ -71,7 +72,8 @@ const SpeakButton = ({
     <button
       onClick={speak}
       type="button"
-      title={state === 'playing' ? 'Stop reading' : 'Read aloud'}
+      title={title || (state === 'playing' ? 'Stop reading' : 'Read aloud')}
+      aria-label={title || (state === 'playing' ? 'Stop reading' : 'Read aloud')}
       className={`inline-flex items-center font-semibold rounded-full border transition-all
         ${sizeClass} ${state === 'playing' ? playingClass : idleClass} ${className}`}
     >

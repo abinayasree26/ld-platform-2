@@ -155,6 +155,31 @@ export const ldAPI = {
   chat: (message, history) => api.post('/ld/chat', { message, history }),
 };
 
+// ─── Adaptive Screening (NEW English+Math skill assessment) ───
+// Separate from ldAPI.screening* (the LD dyslexia/dysgraphia screening).
+const ADAPTIVE_TIMEOUT = 120000; // allow slow AI/STT scoring on submit
+export const adaptiveAPI = {
+  questions: () => api.get('/ld/adaptive-screening/questions'),
+  start: () => api.post('/ld/adaptive-screening/start'),
+  answer: (sessionId, questionId, studentAnswer) =>
+    api.post('/ld/adaptive-screening/answer', { sessionId, questionId, studentAnswer }),
+  submit: (sessionId, answers, durationSeconds) =>
+    api.post('/ld/adaptive-screening/submit',
+      { sessionId, answers, durationSeconds }, { timeout: ADAPTIVE_TIMEOUT }),
+  result: (sessionId) => api.get(`/ld/adaptive-screening/result/${sessionId}`),
+  history: () => api.get('/ld/adaptive-screening/history'),
+  nextTest: (sessionId) => api.get(`/ld/adaptive-screening/next-test/${sessionId}`),
+  // Phase 5 — Gemma-powered helpers
+  explain: (questionId, studentAnswer) =>
+    api.post('/ld/adaptive-screening/explain', { questionId, studentAnswer }, { timeout: ADAPTIVE_TIMEOUT }),
+  extraPractice: (subject, skill, difficulty, count) =>
+    api.post('/ld/adaptive-screening/extra-practice', { subject, skill, difficulty, count }, { timeout: ADAPTIVE_TIMEOUT }),
+  conversation: (history, level, topic) =>
+    api.post('/ld/adaptive-screening/conversation', { history, level, topic }, { timeout: ADAPTIVE_TIMEOUT }),
+  practiceRecommendations: (sessionId) =>
+    api.get(`/ld/adaptive-screening/practice-recommendations/${sessionId}`),
+};
+
 export const complianceAPI = {
   recordConsent: (consentType = 'data_processing') =>
     api.post('/ld/compliance/consent', { consentType, granted: true }),

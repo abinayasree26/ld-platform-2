@@ -116,13 +116,13 @@ const StudentHeader = ({ showBell = true }) => {
   const activeNotifications = notifications.filter(n => !dismissed.includes(String(n.id)));
 
   const iconBtnStyle = {
-    background: 'none', border: '1px solid #e2e8f0', borderRadius: 10,
-    width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', fontSize: 18, transition: 'background 0.15s',
+    background: 'none', border: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`, borderRadius: 12,
+    width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', fontSize: 18, transition: 'background 0.15s, border-color 0.15s',
   };
 
   return (
-    <header className="sp-header" style={{ flexShrink: 0, background: mode === 'dark' ? '#1e293b' : '#fff', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`, padding: '12px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
+    <header className="sp-header" style={{ flexShrink: 0, background: mode === 'dark' ? '#1e293b' : '#fff', borderBottom: `1px solid ${mode === 'dark' ? '#334155' : '#e2e8f0'}`, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20, boxShadow: mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.04)' }}>
       <button
         onClick={toggle}
         title="Toggle sidebar"

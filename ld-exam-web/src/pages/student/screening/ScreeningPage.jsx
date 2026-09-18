@@ -8,6 +8,7 @@ import AboutIcon from '../../../components/AboutIcon';
 
 
 import { supabase } from '../../../services/supabaseClient';
+import { getOptionImage, isPictureQuestion } from '../../../data/optionImages';
 
 const LD_RESULT = {
   dyslexia:    { label: 'Dyslexia', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200', icon: '🧠' },
@@ -348,21 +349,55 @@ const StudentScreeningPage = () => {
           </div>
 
           {/* Options */}
-          <div className="space-y-3">
-            {options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => handleAnswer(opt)}
-                className={`w-full text-left px-5 py-4 rounded-xl border-2 font-semibold text-sm transition-all
-                  ${selected === opt
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-slate-100 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700'
-                  }`}>
-                <span className="mr-3 font-black text-slate-400">{String.fromCharCode(65 + i)}.</span>
-                {opt}
-              </button>
-            ))}
-          </div>
+          {isPictureQuestion(q) ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {options.map((opt, i) => {
+                const img = getOptionImage(opt);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleAnswer(opt)}
+                    className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 font-semibold text-sm transition-all
+                      ${selected === opt
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-slate-100 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700'
+                      }`}>
+                    {img ? (
+                      <img
+                        src={img}
+                        alt={opt}
+                        loading="lazy"
+                        className="w-20 h-20 object-contain"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span className="text-4xl">🖼️</span>
+                    )}
+                    <span className="text-center">
+                      <span className="mr-1 font-black text-slate-400">{String.fromCharCode(65 + i)}.</span>
+                      {opt}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {options.map((opt, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleAnswer(opt)}
+                  className={`w-full text-left px-5 py-4 rounded-xl border-2 font-semibold text-sm transition-all
+                    ${selected === opt
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-100 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700'
+                    }`}>
+                  <span className="mr-3 font-black text-slate-400">{String.fromCharCode(65 + i)}.</span>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button
